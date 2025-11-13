@@ -1,64 +1,44 @@
 <?php
 /*
  * Archivo: index.php
- * Propósito: Controlador Frontal (Front Controller).
- * Punto de entrada único para todas las solicitudes.
- * Carga el controlador y ejecuta la acción solicitada.
- * Criterios: Criterio 1 (Arquitectura MVC)
+ * Propósito: Punto de entrada principal (Front Controller).
+ * (Corregido: Se usa __DIR__ para cargar la configuración de forma segura)
  */
 
-// 1. Iniciar la sesión
-// Fundamental para manejar la autenticación (login, roles)
-session_start();
+// Iniciar sesión
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
-// 2. Definir constantes de rutas
-// (Opcional pero muy recomendado para no tener problemas con "includes")
-define('BASE_PATH', __DIR__ . '/');
-define('CONTROLLER_PATH', BASE_PATH . 'controllers/');
-define('MODEL_PATH', BASE_PATH . 'models/');
-define('VIEW_PATH', BASE_PATH . 'views/');
+// --- ¡SOLUCIÓN A PRUEBA DE ERRORES! ---
+// Cargar la configuración usando una ruta absoluta basada en __DIR__
+require_once __DIR__ . '/config/config.php';
 
-// 3. Lógica del Enrutador (Router) Básico
-
-// Obtener el controlador. Por defecto 'UsuarioController' (para el login)
-// La URL será: index.php?controller=Usuario
-$controllerName = isset($_GET['controller']) ? $_GET['controller'] : 'Usuario';
-
-// Obtener la acción (método). Por defecto 'index' (mostrar login)
-// La URL será: index.php?controller=Usuario&action=index
+// Determinar el controlador y la acción
+$controllerName = (isset($_GET['controller']) ? ucfirst($_GET['controller']) : 'Usuario') . 'Controller';
 $actionName = isset($_GET['action']) ? $_GET['action'] : 'index';
 
-// 4. Formatear nombres
-// Ej: 'Usuario' -> 'UsuarioController'
-$controllerFile = $controllerName . 'Controller.php';
-$controllerClassName = $controllerName . 'Controller';
+// Construir la ruta al controlador (Ahora CONTROLLER_PATH está definido)
+$controllerPath = CONTROLLER_PATH . $controllerName . '.php';
 
-// 5. Cargar el archivo del controlador
-$controllerFilePath = CONTROLLER_PATH . $controllerFile;
-
-if (file_exists($controllerFilePath)) {
+// Verificar si el archivo del controlador existe
+if (file_exists($controllerPath)) {
+    require_once $controllerPath;
     
-    // Incluir el archivo del controlador
-    require_once $controllerFilePath;
-
-    // 6. Verificar si la clase y el método existen
-    if (class_exists($controllerClassName)) {
+    // Verificar si la clase del controlador existe
+    if (class_exists($controllerName)) {
+        $controller = new $controllerName();
         
-        $controllerInstance = new $controllerClassName();
-
-        if (method_exists($controllerInstance, $actionName)) {
-            // 7. Ejecutar la acción (método)
-            $controllerInstance->$actionName();
+        // Verificar si el método (acción) existe en el controlador
+        if (method_exists($controller, $actionName)) {
+            $controller->$actionName();
         } else {
-            // Error: Método (acción) no encontrado
-            echo "Error: La acción '{$actionName}' no existe en el controlador '{$controllerClassName}'.";
+            echo "Error: La acción '{$actionName}' no existe en el controlador '{$controllerName}'.";
         }
     } else {
-        // Error: Clase del controlador no encontrada
-        echo "Error: La clase '{$controllerClassName}' no fue encontrada en '{$controllerFile}'.";
+        echo "Error: La clase '{$controllerName}' no existe.";
     }
 } else {
-    // Error: Archivo del controlador no encontrado
-    echo "Error: El archivo del controlador '{$controllerFile}' no existe.";
+    echo "Error: El controlador '{$controllerName}' no se encontró en '{$controllerPath}'.";
 }
 ?>

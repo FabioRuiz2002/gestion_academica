@@ -1,5 +1,8 @@
 <?php
-// Archivo: views/profesor/tomar_asistencia.php
+/*
+ * Archivo: views/profesor/tomar_asistencia.php
+ * (Corregido el botón 'Volver')
+ */
 $fecha_display = date('d/m/Y', strtotime($fecha));
 function getEstadoClass($estado) {
     switch ($estado) {
@@ -94,9 +97,10 @@ function getEstadoClass($estado) {
             </button>
         </form>
     <?php endif; ?>
+    
     <div class="mt-4">
-        <a href="index.php?controller=Profesor&action=verCursosAsistencia" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-2"></i> Volver a Cursos
+        <a href="index.php?controller=Profesor&action=panelCurso&id_curso=<?php echo $curso_info['id_curso']; ?>" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Volver al Curso
         </a>
     </div>
 </div>

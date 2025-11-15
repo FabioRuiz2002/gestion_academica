@@ -2,13 +2,14 @@
 /*
  * Archivo: models/Asistencia.php
  * Propósito: Modelo para la gestión de la Asistencia de estudiantes.
- * (Añadida la función 'readPorEstudiante')
+ * (Añadida la función 'readPorEstudianteYCurso')
  */
 class Asistencia {
     
     private $conn;
     private $table_name = "asistencias";
 
+    // ... (propiedades: id_asistencia, id_curso, etc.) ...
     public $id_asistencia;
     public $id_curso;
     public $id_estudiante;
@@ -19,7 +20,9 @@ class Asistencia {
         $this->conn = $db;
     }
 
+    // ... (funciones del profesor: checkAsistenciaTomada, guardarAsistencia, etc.) ...
     public function checkAsistenciaTomada($id_curso, $fecha) {
+        // ... (código existente) ...
         $query = "SELECT COUNT(id_asistencia) as total 
                   FROM " . $this->table_name . "
                   WHERE id_curso = :id_curso AND fecha = :fecha";
@@ -32,6 +35,7 @@ class Asistencia {
     }
 
     public function guardarAsistencia($id_curso, $fecha, $asistencias) {
+        // ... (código existente) ...
         $this->conn->beginTransaction();
         try {
             $query = "INSERT INTO " . $this->table_name . " (id_curso, id_estudiante, fecha, estado) 
@@ -57,6 +61,7 @@ class Asistencia {
     }
     
     public function readAsistenciaPorFecha($id_curso, $fecha) {
+        // ... (código existente) ...
         $query = "SELECT 
                     a.estado, 
                     u.nombre, 
@@ -77,6 +82,7 @@ class Asistencia {
     }
     
     public function readHistoricoPorCurso($id_curso) {
+        // ... (código existente) ...
         $query = "SELECT 
                     a.fecha, 
                     u.nombre, 
@@ -97,8 +103,7 @@ class Asistencia {
     }
 
     /**
-     * NUEVA FUNCIÓN PARA EL ESTUDIANTE
-     * Obtiene el historial de asistencia de un estudiante en todos sus cursos.
+     * Obtiene TODAS las asistencias de un estudiante (para la vista general).
      */
     public function readPorEstudiante($id_estudiante) {
         try {
@@ -114,13 +119,38 @@ class Asistencia {
                         a.id_estudiante = :id_estudiante
                       ORDER BY 
                         c.nombre_curso ASC, a.fecha DESC";
-
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':id_estudiante', $id_estudiante);
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             echo "Error al leer asistencias del estudiante: " . $e->getMessage();
+            return [];
+        }
+    }
+    
+    /**
+     * NUEVA FUNCIÓN
+     * Obtiene la asistencia de UN estudiante para UN curso.
+     */
+    public function readPorEstudianteYCurso($id_estudiante, $id_curso) {
+        try {
+            $query = "SELECT 
+                        a.fecha,
+                        a.estado
+                      FROM 
+                        " . $this->table_name . " a
+                      WHERE 
+                        a.id_estudiante = :id_estudiante AND a.id_curso = :id_curso
+                      ORDER BY 
+                        a.fecha DESC";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':id_estudiante', $id_estudiante);
+            $stmt->bindParam(':id_curso', $id_curso);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            echo "Error al leer asistencias del curso: " . $e->getMessage();
             return [];
         }
     }

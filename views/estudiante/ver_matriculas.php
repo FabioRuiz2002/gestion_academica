@@ -1,9 +1,15 @@
 <?php
-// Archivo: views/estudiante/ver_matriculas.php
-// (Añadido el campo 'horario')
+/*
+ * Archivo: views/estudiante/ver_matriculas.php
+ * (Añadida la lógica de PRERREQUISITOS)
+ */
+ 
+ // Definimos la nota mínima aprobatoria
+ define('NOTA_APROBATORIA', 10.5); 
 ?>
 <div class="container mt-4">
-    <h2 class="mb-4"><i class="fas fa-book-open me-2"></i> Mis Cursos y Matrícula</h2>
+    <h2 class="mb-4"><i class="fas fa-book-open me-2"></i> Matrícula en Línea</h2>
+    
     <?php 
     if (isset($_SESSION['mensaje'])): ?>
         <div class="alert alert-<?php echo $_SESSION['mensaje']['tipo']; ?> alert-dismissible fade show" role="alert">
@@ -12,80 +18,100 @@
         </div>
         <?php unset($_SESSION['mensaje']); ?>
     <?php endif; ?>
-    <ul class="nav nav-tabs mb-4" id="matriculaTabs" role="tablist">
-      <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="matriculados-tab" data-bs-toggle="tab" data-bs-target="#matriculados" type="button" role="tab" aria-controls="matriculados" aria-selected="true">
-            <i class="fas fa-check-circle me-1"></i> Cursos Matriculados
-        </button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="disponibles-tab" data-bs-toggle="tab" data-bs-target="#disponibles" type="button" role="tab" aria-controls="disponibles" aria-selected="false">
-            <i class="fas fa-plus me-1"></i> Cursos Disponibles (<?php echo count($cursosDisponibles); ?>)
-        </button>
-      </li>
-    </ul>
-    <div class="tab-content" id="matriculaTabsContent">
-        <div class="tab-pane fade show active" id="matriculados" role="tabpanel" aria-labelledby="matriculados-tab">
-            <h4 class="mb-3">Cursos donde ya estás inscrito:</h4>
-            <?php if (empty($cursosMatriculados)): ?>
-                <div class="alert alert-warning">No estás matriculado en ningún curso aún. Utiliza la pestaña "Cursos Disponibles".</div>
-            <?php else: ?>
-                <ul class="list-group shadow-sm">
-                    <?php foreach ($cursosMatriculados as $curso): ?>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <h5 class="mb-1"><?php echo htmlspecialchars($curso['nombre_curso']); ?></h5>
-                                <small class="text-muted">
-                                    <i class="fas fa-clock me-1"></i>
-                                    <?php echo htmlspecialchars($curso['horario'] ?? 'Horario no definido'); ?>
-                                </small>
+
+    <?php if (isset($infoPlan) && $infoPlan): ?>
+        <h3 class="text-primary"><?php echo htmlspecialchars($infoPlan['nombre_plan']); ?></h3>
+        <p class="lead">
+            Escuela de: <?php echo htmlspecialchars($infoPlan['nombre_escuela']); ?>
+            (<?php echo htmlspecialchars($infoPlan['nombre_facultad']); ?>)
+        </p>
+        <hr>
+        
+        <?php if (empty($cursosPorCiclo)): ?>
+            <div class="alert alert-success mt-4">
+                <i class="fas fa-check-circle me-2"></i> ¡Felicidades! Ya te has matriculado en todos los cursos disponibles de tu malla.
+            </div>
+        <?php else: ?>
+            <p>Selecciona los cursos en los que deseas matricularte. El sistema validará los prerrequisitos.</p>
+            <div class="accordion" id="accordionMalla">
+                
+                <?php foreach ($cursosPorCiclo as $ciclo => $cursos): ?>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading-<?php echo $ciclo; ?>">
+                            <button class="accordion-button fs-5" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-<?php echo $ciclo; ?>" aria-expanded="true">
+                                Ciclo <?php echo $ciclo; ?>
+                            </button>
+                        </h2>
+                        <div id="collapse-<?php echo $ciclo; ?>" class="accordion-collapse collapse show" data-bs-parent="#accordionMalla">
+                            <div class="accordion-body">
+                                <table class="table table-striped table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Curso</th>
+                                            <th>Horario</th>
+                                            <th>Profesor</th>
+                                            <th>Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($cursos as $curso): ?>
+                                            <?php
+                                            // --- LÓGICA DE PRERREQUISITOS ---
+                                            $isBloqueado = false;
+                                            $requisitosFaltantes = [];
+                                            
+                                            // 1. ¿Este curso tiene reglas?
+                                            if (isset($reglasPrerequisitos[$curso['id_curso']])) {
+                                                // 2. Sí tiene, iterar sobre cada regla
+                                                foreach ($reglasPrerequisitos[$curso['id_curso']] as $req) {
+                                                    $id_curso_req = $req['id_curso_requisito'];
+                                                    
+                                                    // 3. ¿Está en el historial de notas Y está aprobado?
+                                                    if (!isset($historialPromedios[$id_curso_req]) || $historialPromedios[$id_curso_req] < NOTA_APROBATORIA) {
+                                                        // 4. Si no está o está desaprobado -> Bloquear
+                                                        $isBloqueado = true;
+                                                        $requisitosFaltantes[] = htmlspecialchars($req['nombre_curso_requisito']);
+                                                    }
+                                                }
+                                            }
+                                            // --- FIN DE LA LÓGICA ---
+                                            ?>
+                                            <tr>
+                                                <td><?php echo htmlspecialchars($curso['nombre_curso']); ?></td>
+                                                <td><?php echo htmlspecialchars($curso['horario'] ?? 'No definido'); ?></td>
+                                                <td><?php echo htmlspecialchars($curso['nombre_profesor'] . ' ' . $curso['apellido_profesor']); ?></td>
+                                                
+                                                <td>
+                                                    <?php if ($isBloqueado): ?>
+                                                        <button class="btn btn-secondary btn-sm" disabled>
+                                                            <i class="fas fa-lock me-1"></i> Bloqueado
+                                                        </button>
+                                                        <div class="form-text text-danger small">
+                                                            Requiere: <?php echo implode(', ', $requisitosFaltantes); ?>
+                                                        </div>
+                                                    <?php else: ?>
+                                                        <form method="POST" action="index.php?controller=Estudiante&action=matricularCurso" class="mb-0">
+                                                            <input type="hidden" name="id_curso" value="<?php echo $curso['id_curso']; ?>">
+                                                            <button type="submit" class="btn btn-success btn-sm">
+                                                                <i class="fas fa-user-plus me-1"></i> Matricular
+                                                            </button>
+                                                        </form>
+                                                    <?php endif; ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
                             </div>
-                            <span class="badge bg-primary rounded-pill">Matriculado</span>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            <?php endif; ?>
-        </div>
-        <div class="tab-pane fade" id="disponibles" role="tabpanel" aria-labelledby="disponibles-tab">
-            <h4 class="mb-3">Cursos disponibles para matrícula:</h4>
-            <?php if (empty($cursosDisponibles)): ?>
-                <div class="alert alert-success">¡No hay más cursos disponibles para matricular!</div>
-            <?php else: ?>
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover shadow-sm">
-                        <thead class="table-info">
-                            <tr>
-                                <th>Curso</th>
-                                <th>Profesor</th>
-                                <th>Horario</th>
-                                <th>Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($cursosDisponibles as $curso): ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($curso['nombre_curso']); ?></td>
-                                    <td><?php echo htmlspecialchars($curso['nombre_profesor'] . ' ' . $curso['apellido_profesor']); ?></td>
-                                    <td>
-                                        <i class="fas fa-clock me-1 text-muted"></i>
-                                        <?php echo htmlspecialchars($curso['horario'] ?? 'No definido'); ?>
-                                    </td>
-                                    <td>
-                                        <form method="POST" action="index.php?controller=Estudiante&action=matricularCurso">
-                                            <input type="hidden" name="id_curso" value="<?php echo $curso['id_curso']; ?>">
-                                            <button type="submit" class="btn btn-success btn-sm">
-                                                <i class="fas fa-user-plus"></i> Matricular
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php endif; ?>
-        </div>
-    </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+                
+            </div>
+        <?php endif; ?>
+        
+    <?php endif; ?>
+    
     <div class="mt-4">
         <a href="index.php?controller=Estudiante&action=index" class="btn btn-secondary">
             <i class="fas fa-arrow-left me-2"></i> Volver al Panel

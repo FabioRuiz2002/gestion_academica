@@ -1,18 +1,22 @@
 <?php
-// Archivo: views/admin/gestionar_cursos.php
+/*
+ * Archivo: views/admin/gestionar_cursos.php
+ * Propósito: Página independiente para el CRUD de Cursos.
+ */
 ?>
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>Gestionar Cursos</h2>
+        <h2>Gestionar Cursos (Repositorio General)</h2>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#crearCursoModal">
             <i class="fas fa-plus me-2"></i> Crear Nuevo Curso
         </button>
     </div>
+    <p>Este es el repositorio general de todos los cursos. Para asignarlos a una malla, ve a "Gestión Académica".</p>
 
     <?php
-    if (isset($_SESSION['error_message'])) {
-        echo '<div class="alert alert-danger">' . $_SESSION['error_message'] . '</div>';
-        unset($_SESSION['error_message']);
+    if (isset($_SESSION['error_message_curso'])) {
+        echo '<div class="alert alert-danger">' . $_SESSION['error_message_curso'] . '</div>';
+        unset($_SESSION['error_message_curso']);
     }
     ?>
 
@@ -22,7 +26,8 @@
                 <tr>
                     <th>ID</th>
                     <th>Nombre del Curso</th>
-                    <th>Horario</th> <th>Profesor</th>
+                    <th>Horario</th>
+                    <th>Profesor</th>
                     <th>Año</th>
                     <th>Acciones</th>
                 </tr>
@@ -32,7 +37,8 @@
                     <tr>
                         <td><?php echo $row['id_curso']; ?></td>
                         <td><?php echo htmlspecialchars($row['nombre_curso']); ?></td>
-                        <td><?php echo htmlspecialchars($row['horario']); ?></td> <td><?php echo htmlspecialchars($row['nombre_profesor'] . ' ' . $row['apellido_profesor']); ?></td>
+                        <td><?php echo htmlspecialchars($row['horario']); ?></td>
+                        <td><?php echo htmlspecialchars($row['nombre_profesor'] . ' ' . $row['apellido_profesor']); ?></td>
                         <td><?php echo htmlspecialchars($row['anio_academico']); ?></td>
                         <td>
                             <button class="btn btn-warning btn-sm" onclick="cargarDatosCurso(<?php echo $row['id_curso']; ?>)" data-bs-toggle="modal" data-bs-target="#editarCursoModal">
@@ -47,17 +53,14 @@
             </tbody>
         </table>
     </div>
-    <a href="index.php?controller=Admin&action=index" class="btn btn-secondary mt-3">Volver al Panel</a>
+    <a href="index.php?controller=Admin&action=index" class="btn btn-secondary mt-3">Volver al Panel Principal</a>
 </div>
 
 <div class="modal fade" id="crearCursoModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <form action="index.php?controller=Admin&action=crearCurso" method="POST">
-                <div class="modal-header">
-                    <h5 class="modal-title">Crear Nuevo Curso</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
+                <div class="modal-header"><h5 class="modal-title">Crear Nuevo Curso</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="nombre_curso" class="form-label">Nombre del Curso</label>
@@ -98,10 +101,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <form action="index.php?controller=Admin&action=editarCurso" method="POST">
-                <div class="modal-header">
-                    <h5 class="modal-title">Editar Curso</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
+                <div class="modal-header"><h5 class="modal-title">Editar Curso</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
                     <input type="hidden" id="edit_id_curso" name="edit_id_curso">
                     <div class="mb-3">
@@ -143,20 +143,19 @@ function cargarDatosCurso(id) {
     fetch('index.php?controller=Admin&action=getCurso&id=' + id)
         .then(response => response.json())
         .then(data => {
-            if (data.error) {
-                alert(data.error);
-            } else {
+            if (data.error) { alert(data.error); } 
+            else {
                 document.getElementById('edit_id_curso').value = data.id_curso;
                 document.getElementById('edit_nombre_curso').value = data.nombre_curso;
                 document.getElementById('edit_descripcion').value = data.descripcion;
-                document.getElementById('edit_horario').value = data.horario; // <-- NUEVO
+                document.getElementById('edit_horario').value = data.horario;
                 document.getElementById('edit_id_profesor').value = data.id_profesor;
                 document.getElementById('edit_anio_academico').value = data.anio_academico;
             }
         });
 }
 function confirmarEliminarCurso(id) {
-    if (confirm('¿Estás seguro de que deseas eliminar este curso? Se eliminarán todas las matrículas, calificaciones y asistencias asociadas.')) {
+    if (confirm('¿Estás seguro de que deseas eliminar este curso? Se eliminarán todas las matrículas y asignaciones a mallas.')) {
         fetch('index.php?controller=Admin&action=eliminarCurso', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -164,11 +163,8 @@ function confirmarEliminarCurso(id) {
         })
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                window.location.reload();
-            } else {
-                alert('Error al eliminar el curso: ' + data.message);
-            }
+            if (data.success) { window.location.reload(); } 
+            else { alert('Error al eliminar el curso: ' + data.message); }
         });
     }
 }

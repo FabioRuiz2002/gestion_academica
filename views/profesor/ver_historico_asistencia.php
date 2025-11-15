@@ -1,5 +1,8 @@
 <?php
-// Archivo: views/profesor/ver_historico_asistencia.php
+/*
+ * Archivo: views/profesor/ver_historico_asistencia.php
+ * (Corregido el botón 'Volver')
+ */
 function getAsistenciaBadge($estado) {
     switch ($estado) {
         case 'Presente': return '<span class="badge bg-success">P</span>';
@@ -45,9 +48,10 @@ function getAsistenciaBadge($estado) {
             </table>
         </div>
     <?php endif; ?>
+    
     <div class="mt-4">
-        <a href="index.php?controller=Profesor&action=verCursosAsistencia" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-2"></i> Volver a Selección de Curso
+        <a href="index.php?controller=Profesor&action=panelCurso&id_curso=<?php echo $curso_info['id_curso']; ?>" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Volver al Curso
         </a>
     </div>
 </div>

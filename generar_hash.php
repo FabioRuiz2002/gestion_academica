@@ -1,26 +1,16 @@
 <?php
-// Escribe aquí la contraseña que quieras usar
-$password_a_hashear = '123456';
+/*
+ * Archivo temporal: generar_hash.php
+ * Úsalo para generar un hash válido para la contraseña "123".
+ */
 
-// Esto genera el hash
-$hash_generado = password_hash($password_a_hashear, PASSWORD_DEFAULT);
+$password_plana = "123";
+$hash_nuevo = password_hash($password_plana, PASSWORD_DEFAULT);
 
-// --- Mostramos el resultado ---
-echo "<h1>Generador de Hash</h1>";
-echo "Hemos generado un hash para la contraseña (texto simple): <b>" . $password_a_hashear . "</b><br><br>";
-echo "<h3>TU HASH CORRECTO:</h3>";
-echo "<p>Copia y pega la siguiente línea completa en phpMyAdmin:</p>";
-
-// Te lo pongo en un textarea para que sea fácil de copiar
-echo '<textarea rows="3" cols="80" readonly style="font-size: 1.2rem; background-color: #eee; padding: 10px;">';
-echo htmlspecialchars($hash_generado);
-echo '</textarea>';
-
-echo "<br><br><h3>Instrucciones:</h3>";
-echo "<ol>";
-echo "<li>Copia el hash de la caja de texto de arriba.</li>";
-echo "<li>Ve a phpMyAdmin, tabla 'usuarios', edita el 'admin@correo.com'.</li>";
-echo "<li>Pega este hash en el campo 'password' y guarda.</li>";
-echo "<li>¡Prueba tu login!</li>";
-echo "</ol>";
+echo "<h3>Hash Generado para la contraseña '123'</h3>";
+echo "<p>Copia esta línea completa (incluyendo el $2y$) y pégala en la columna 'password' de tu usuario en phpMyAdmin:</p>";
+echo "<hr>";
+echo "<strong>" . $hash_nuevo . "</strong>";
+echo "<hr>";
+echo "<p style='color:red;'>¡IMPORTANTE! Borra este archivo (generar_hash.php) cuando termines.</p>";
 ?>

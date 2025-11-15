@@ -1,0 +1,268 @@
+-- --------------------------------------------------------
+-- SCRIPT SQL COMPLETO - GESTIÓN ACADÉMICA
+-- --------------------------------------------------------
+
+-- (PREPARACIÓN) Borra todo para empezar de cero
+SET FOREIGN_KEY_CHECKS=0;
+DROP TABLE IF EXISTS `facultades`, `escuelas`, `planes_estudio`, `cursos_plan`, `usuarios`, `roles`, `cursos`, `matriculas`, `calificaciones`, `asistencias`, `materiales`, `tareas`, `entregas`;
+SET FOREIGN_KEY_CHECKS=1;
+
+-- --------------------------------------------------------
+-- MÓDULO 1: ESTRUCTURA DE ROLES
+-- --------------------------------------------------------
+CREATE TABLE `roles` (
+  `id_rol` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `nombre_rol` varchar(50) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO `roles` (`id_rol`, `nombre_rol`) VALUES
+(1, 'Administrador'),
+(2, 'Profesor'),
+(3, 'Estudiante');
+
+-- --------------------------------------------------------
+-- MÓDULO 2: ESTRUCTURA ACADÉMICA (FACULTADES, ESCUELAS, PLANES)
+-- --------------------------------------------------------
+CREATE TABLE `facultades` (
+  `id_facultad` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `nombre_facultad` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `escuelas` (
+  `id_escuela` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `id_facultad` int(11) NOT NULL,
+  `nombre_escuela` varchar(255) NOT NULL,
+  FOREIGN KEY (`id_facultad`) REFERENCES `facultades` (`id_facultad`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `planes_estudio` (
+  `id_plan_estudio` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `id_escuela` int(11) NOT NULL,
+  `nombre_plan` varchar(100) NOT NULL,
+  `anio` int(4) NOT NULL,
+  FOREIGN KEY (`id_escuela`) REFERENCES `escuelas` (`id_escuela`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- (Contenido de ejemplo)
+INSERT INTO `facultades` (`id_facultad`, `nombre_facultad`) VALUES
+(1, 'Facultad de Ciencias Económicas y de Negocios'),
+(2, 'Facultad de Ingeniería de Sistemas e Informática');
+
+INSERT INTO `escuelas` (`id_escuela`, `id_facultad`, `nombre_escuela`) VALUES
+(1, 1, 'Contabilidad'),
+(2, 1, 'Economía'),
+(3, 1, 'Administración'),
+(4, 1, 'Negocios Internacionales'),
+(5, 2, 'Ingeniería de Software'),
+(6, 2, 'Ciencias de la Computación');
+
+INSERT INTO `planes_estudio` (`id_plan_estudio`, `id_escuela`, `nombre_plan`, `anio`) VALUES
+(1, 1, 'Plan 2024 - Contabilidad', 2024),
+(2, 5, 'Plan 2024 - Ing. Software', 2024);
+
+-- --------------------------------------------------------
+-- MÓDULO 3: USUARIOS (CON CONEXIÓN A PLAN DE ESTUDIO)
+-- --------------------------------------------------------
+CREATE TABLE `usuarios` (
+  `id_usuario` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `id_rol` int(11) NOT NULL,
+  `id_plan_estudio` int(11) DEFAULT NULL,
+  `email` varchar(100) NOT NULL UNIQUE,
+  `password` varchar(255) NOT NULL,
+  `nombre` varchar(100) NOT NULL,
+  `apellido` varchar(100) NOT NULL,
+  `estado` tinyint(1) DEFAULT 1,
+  FOREIGN KEY (`id_rol`) REFERENCES `roles` (`id_rol`),
+  FOREIGN KEY (`id_plan_estudio`) REFERENCES `planes_estudio` (`id_plan_estudio`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- (Contenido de ejemplo - Contraseña para todos es '123')
+INSERT INTO `usuarios` (`id_usuario`, `id_rol`, `id_plan_estudio`, `email`, `password`, `nombre`, `apellido`, `estado`) VALUES
+(1, 1, NULL, 'admin@correo.com', '$2y$10$f3.Zk5C5/5s3l5G5g.h0eOqP69gJz./0C6.1xY/E.5.aD/o1uN63e', 'Admin', 'Principal', 1),
+(2, 2, NULL, 'profesor@correo.com', '$2y$10$f3.Zk5C5/5s3l5G5g.h0eOqP69gJz./0C6.1xY/E.5.aD/o1uN63e', 'Profesor', 'Prueba', 1),
+(3, 3, 2, 'estudiante@correo.com', '$2y$10$f3.Zk5C5/5s3l5G5g.h0eOqP69gJz./0C6.1xY/E.5.aD/o1uN63e', 'Estudiante', 'Sistemas', 1),
+(4, 3, 1, 'estudiante2@correo.com', '$2y$10$f3.Zk5C5/5s3l5G5g.h0eOqP69gJz./0C6.1xY/E.5.aD/o1uN63e', 'Estudiante', 'Contabilidad', 1);
+
+-- --------------------------------------------------------
+-- MÓDULO 4: CURSOS (CON HORARIO)
+-- --------------------------------------------------------
+CREATE TABLE `cursos` (
+  `id_curso` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `id_profesor` int(11) NOT NULL,
+  `nombre_curso` varchar(100) NOT NULL,
+  `descripcion` text DEFAULT NULL,
+  `horario` varchar(100) DEFAULT NULL,
+  `anio_academico` int(4) NOT NULL,
+  FOREIGN KEY (`id_profesor`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- (Contenido de ejemplo - Asignados al Profesor ID 2)
+INSERT INTO `cursos` (`id_curso`, `id_profesor`, `nombre_curso`, `descripcion`, `horario`, `anio_academico`) VALUES
+(1, 2, 'Cálculo I', 'Curso de introducción al cálculo diferencial.', 'Lu 9-11, Mi 9-11', 2024),
+(2, 2, 'Programación Orientada a Objetos', 'Curso de POO con Java.', 'Ma 11-13, Ju 11-13', 2024),
+(3, 2, 'Bases de Datos I', 'Introducción a SQL y Modelo Relacional.', 'Vi 8-11', 2024),
+(4, 2, 'Contabilidad Básica', 'Introducción a la contabilidad financiera.', 'Ma 8-10', 2024);
+
+-- --------------------------------------------------------
+-- MÓDULO 5: MALLA CURRICULAR (CURSOS_PLAN)
+-- --------------------------------------------------------
+CREATE TABLE `cursos_plan` (
+  `id_cursos_plan` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `id_plan_estudio` int(11) NOT NULL,
+  `id_curso` int(11) NOT NULL,
+  `ciclo` int(2) NOT NULL,
+  FOREIGN KEY (`id_plan_estudio`) REFERENCES `planes_estudio` (`id_plan_estudio`) ON DELETE CASCADE,
+  FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id_curso`) ON DELETE CASCADE,
+  UNIQUE KEY `uk_plan_curso` (`id_plan_estudio`,`id_curso`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- (Contenido de ejemplo - Asignación a Mallas)
+INSERT INTO `cursos_plan` (`id_plan_estudio`, `id_curso`, `ciclo`) VALUES
+(2, 1, 1), -- Plan Ing. Software: Cálculo I, Ciclo 1
+(2, 2, 2), -- Plan Ing. Software: POO, Ciclo 2
+(2, 3, 2), -- Plan Ing. Software: Bases de Datos I, Ciclo 2
+(1, 4, 1); -- Plan Contabilidad: Contabilidad Básica, Ciclo 1
+
+-- --------------------------------------------------------
+-- MÓDULO 6: MATRÍCULA
+-- --------------------------------------------------------
+CREATE TABLE `matriculas` (
+  `id_matricula` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `id_curso` int(11) NOT NULL,
+  `id_estudiante` int(11) NOT NULL,
+  FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id_curso`) ON DELETE CASCADE,
+  FOREIGN KEY (`id_estudiante`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
+  UNIQUE KEY `uk_matricula` (`id_curso`,`id_estudiante`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- MÓDULO 7: CALIFICACIONES (LIBRO DE NOTAS)
+-- --------------------------------------------------------
+CREATE TABLE `calificaciones` (
+  `id_calificacion` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `id_curso` int(11) NOT NULL,
+  `id_estudiante` int(11) NOT NULL,
+  `nota1` decimal(4,2) DEFAULT NULL,
+  `nota2` decimal(4,2) DEFAULT NULL,
+  `nota3` decimal(4,2) DEFAULT NULL,
+  FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id_curso`) ON DELETE CASCADE,
+  FOREIGN KEY (`id_estudiante`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
+  UNIQUE KEY `uk_calificacion` (`id_curso`,`id_estudiante`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- MÓDULO 8: ASISTENCIA
+-- --------------------------------------------------------
+CREATE TABLE `asistencias` (
+  `id_asistencia` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `id_curso` int(11) NOT NULL,
+  `id_estudiante` int(11) NOT NULL,
+  `fecha` date NOT NULL,
+  `estado` enum('Presente','Ausente','Tardanza') NOT NULL,
+  FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id_curso`) ON DELETE CASCADE,
+  FOREIGN KEY (`id_estudiante`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- MÓDULO 9: MATERIALES DE CURSO
+-- --------------------------------------------------------
+CREATE TABLE `materiales` (
+  `id_material` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `id_curso` int(11) NOT NULL,
+  `nombre_archivo` varchar(255) NOT NULL,
+  `ruta_archivo` varchar(255) NOT NULL,
+  `fecha_subida` timestamp NOT NULL DEFAULT current_timestamp(),
+  FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id_curso`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- MÓDULO 10: TAREAS
+-- --------------------------------------------------------
+CREATE TABLE `tareas` (
+  `id_tarea` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `id_curso` int(11) NOT NULL,
+  `titulo` varchar(255) NOT NULL,
+  `descripcion` text DEFAULT NULL,
+  `fecha_limite` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id_curso`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- MÓDULO 11: ENTREGAS (CON CALIFICACIÓN)
+-- --------------------------------------------------------
+CREATE TABLE `entregas` (
+  `id_entrega` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `id_tarea` int(11) NOT NULL,
+  `id_estudiante` int(11) NOT NULL,
+  `nombre_archivo` varchar(255) NOT NULL,
+  `ruta_archivo` varchar(255) NOT NULL,
+  `fecha_entrega` timestamp NOT NULL DEFAULT current_timestamp(),
+  `calificacion` decimal(4,2) DEFAULT NULL,
+  `comentario_profesor` text DEFAULT NULL,
+  FOREIGN KEY (`id_tarea`) REFERENCES `tareas` (`id_tarea`) ON DELETE CASCADE,
+  FOREIGN KEY (`id_estudiante`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
+  UNIQUE KEY `uk_entrega` (`id_tarea`,`id_estudiante`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- --- PASO 1: LIMPIAR CURSOS Y MALLA ANTERIORES ---
+-- (Esto es para evitar conflictos con el ejemplo anterior)
+
+SET FOREIGN_KEY_CHECKS=0;
+DELETE FROM `cursos_plan`;
+DELETE FROM `cursos`;
+-- (Reiniciamos el contador de cursos para que los IDs coincidan)
+ALTER TABLE `cursos` AUTO_INCREMENT = 1;
+SET FOREIGN_KEY_CHECKS=1;
+
+-- --- PASO 2: INSERTAR LOS NUEVOS CURSOS (REPOSITORIO) ---
+-- (Todos asignados al Profesor ID 2, "Profesor Prueba")
+
+INSERT INTO `cursos` (`id_curso`, `id_profesor`, `nombre_curso`, `horario`, `anio_academico`) VALUES
+(1, 2, 'Introducción a la Ing. de Software', 'Lu 8-10, Vi 8-10', 2024),
+(2, 2, 'Fundamentos de Programación', 'Ma 8-11, Ju 8-11', 2024),
+(3, 2, 'Matemática Básica', 'Mi 8-11', 2024),
+
+(4, 2, 'Cálculo I', 'Lu 11-13, Mi 11-13', 2024),
+(5, 2, 'Programación Orientada a Objetos I', 'Ma 11-14', 2024),
+(6, 2, 'Matemática Discreta', 'Ju 11-14', 2024),
+
+(7, 2, 'Cálculo II', 'Lu 11-13, Mi 11-13', 2024),
+(8, 2, 'Algoritmos y Estructuras de Datos', 'Ma 14-17', 2024),
+(9, 2, 'Programación Orientada a Objetos II', 'Ju 14-17', 2024),
+(10, 2, 'Bases de Datos I', 'Vi 11-14', 2024),
+
+(11, 2, 'Ingeniería de Software I (Requisitos)', 'Lu 14-17', 2024),
+(12, 2, 'Sistemas Operativos', 'Ma 17-20', 2024),
+(13, 2, 'Bases de Datos II', 'Vi 14-17', 2024),
+
+(14, 2, 'Ingeniería de Software II (Diseño)', 'Lu 17-20', 2024),
+(15, 2, 'Redes y Comunicaciones', 'Mi 17-20', 2024),
+(16, 2, 'Programación Web (Fullstack)', 'Vi 17-20', 2024);
+
+-- --- PASO 3: CONSTRUIR LA MALLA CURRICULAR ---
+-- (Asignar los cursos al "Plan 2024 - Ing. Software", ID_PLAN = 2)
+
+INSERT INTO `cursos_plan` (`id_plan_estudio`, `id_curso`, `ciclo`) VALUES
+-- Ciclo 1
+(2, 1, 1),
+(2, 2, 1),
+(2, 3, 1),
+-- Ciclo 2
+(2, 4, 2),
+(2, 5, 2),
+(2, 6, 2),
+-- Ciclo 3
+(2, 7, 3),
+(2, 8, 3),
+(2, 9, 3),
+(2, 10, 3),
+-- Ciclo 4
+(2, 11, 4),
+(2, 12, 4),
+(2, 13, 4),
+-- Ciclo 5
+(2, 14, 5),
+(2, 15, 5),
+(2, 16, 5);

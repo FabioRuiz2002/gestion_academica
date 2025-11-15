@@ -1,5 +1,6 @@
 <?php
 // Archivo: views/admin/gestionar_usuarios.php
+// (Añadido campo 'Plan de Estudio' a la tabla y modales)
 ?>
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -20,23 +21,29 @@
         <table class="table table-striped table-hover">
             <thead class="table-dark">
                 <tr>
-                    <th>ID</th>
                     <th>Nombre</th>
                     <th>Apellido</th>
                     <th>Email</th>
                     <th>Rol</th>
-                    <th>Estado</th>
+                    <th>Plan de Estudio (Malla)</th> <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 <?php while ($row = $listaUsuarios->fetch(PDO::FETCH_ASSOC)): ?>
                     <tr>
-                        <td><?php echo $row['id_usuario']; ?></td>
                         <td><?php echo htmlspecialchars($row['nombre']); ?></td>
                         <td><?php echo htmlspecialchars($row['apellido']); ?></td>
                         <td><?php echo htmlspecialchars($row['email']); ?></td>
                         <td><span class="badge bg-secondary"><?php echo htmlspecialchars($row['nombre_rol']); ?></span></td>
+                        <td>
+                            <?php if ($row['nombre_plan']): ?>
+                                <span class="badge bg-info text-dark"><?php echo htmlspecialchars($row['nombre_plan']); ?></span>
+                                <br><small class="text-muted"><?php echo htmlspecialchars($row['nombre_escuela']); ?></small>
+                            <?php else: ?>
+                                N/A
+                            <?php endif; ?>
+                        </td>
                         <td><?php echo $row['estado'] ? '<span class="badge bg-success">Activo</span>' : '<span class="badge bg-danger">Inactivo</span>'; ?></td>
                         <td>
                             <button class="btn btn-warning btn-sm" onclick="cargarDatosUsuario(<?php echo $row['id_usuario']; ?>)" data-bs-toggle="modal" data-bs-target="#editarUsuarioModal">
@@ -81,10 +88,21 @@
                     </div>
                     <div class="mb-3">
                         <label for="id_rol" class="form-label">Rol</label>
-                        <select class="form-select" id="id_rol" name="id_rol" required>
+                        <select class="form-select" id="id_rol" name="id_rol" required onchange="togglePlanEstudio('crear')">
                             <option value="">Seleccione un rol</option>
                             <?php foreach ($listaRoles as $rol): ?>
                                 <option value="<?php echo $rol['id_rol']; ?>"><?php echo htmlspecialchars($rol['nombre_rol']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="campo_plan_crear" style="display: none;">
+                        <label for="id_plan_estudio" class="form-label">Plan de Estudio (Malla)</label>
+                        <select class="form-select" id="id_plan_estudio" name="id_plan_estudio">
+                            <option value="">Seleccione un plan...</option>
+                            <?php foreach ($listaPlanes as $plan): ?>
+                                <option value="<?php echo $plan['id_plan_estudio']; ?>">
+                                    <?php echo htmlspecialchars($plan['nombre_escuela'] . ' - ' . $plan['nombre_plan']); ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -127,9 +145,20 @@
                     </div>
                     <div class="mb-3">
                         <label for="edit_id_rol" class="form-label">Rol</label>
-                        <select class="form-select" id="edit_id_rol" name="edit_id_rol" required>
+                        <select class="form-select" id="edit_id_rol" name="edit_id_rol" required onchange="togglePlanEstudio('editar')">
                             <?php foreach ($listaRoles as $rol): ?>
                                 <option value="<?php echo $rol['id_rol']; ?>"><?php echo htmlspecialchars($rol['nombre_rol']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="campo_plan_editar" style="display: none;">
+                        <label for="edit_id_plan_estudio" class="form-label">Plan de Estudio (Malla)</label>
+                        <select class="form-select" id="edit_id_plan_estudio" name="edit_id_plan_estudio">
+                            <option value="">Seleccione un plan...</option>
+                            <?php foreach ($listaPlanes as $plan): ?>
+                                <option value="<?php echo $plan['id_plan_estudio']; ?>">
+                                    <?php echo htmlspecialchars($plan['nombre_escuela'] . ' - ' . $plan['nombre_plan']); ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -144,6 +173,30 @@
 </div>
 
 <script>
+// Función para mostrar/ocultar el dropdown de Plan de Estudio
+function togglePlanEstudio(tipo) {
+    let rol_id, campo_plan_id;
+    if (tipo === 'crear') {
+        rol_id = document.getElementById('id_rol').value;
+        campo_plan_id = 'campo_plan_crear';
+    } else {
+        rol_id = document.getElementById('edit_id_rol').value;
+        campo_plan_id = 'campo_plan_editar';
+    }
+    
+    let campo_plan = document.getElementById(campo_plan_id);
+    
+    // Si el rol es 'Estudiante' (ID 3), muestra el campo. Si no, ocúltalo.
+    if (rol_id == 3) {
+        campo_plan.style.display = 'block';
+    } else {
+        campo_plan.style.display = 'none';
+        // Si se oculta, resetea el valor para no enviar un plan a un profesor
+        campo_plan.querySelector('select').value = ''; 
+    }
+}
+
+// Lógica para el modal de EDICIÓN
 function cargarDatosUsuario(id) {
     fetch('index.php?controller=Admin&action=getUsuario&id=' + id)
         .then(response => response.json())
@@ -156,9 +209,16 @@ function cargarDatosUsuario(id) {
                 document.getElementById('edit_apellido').value = data.apellido;
                 document.getElementById('edit_email').value = data.email;
                 document.getElementById('edit_id_rol').value = data.id_rol;
+                
+                // Asigna el plan de estudio guardado
+                document.getElementById('edit_id_plan_estudio').value = data.id_plan_estudio;
+                
+                // Llama a la función para mostrar/ocultar el campo al cargar
+                togglePlanEstudio('editar'); 
             }
         });
 }
+
 function confirmarEliminarUsuario(id) {
     if (confirm('¿Estás seguro de que deseas eliminar este usuario? Esta acción no se puede deshacer.')) {
         fetch('index.php?controller=Admin&action=eliminarUsuario', {

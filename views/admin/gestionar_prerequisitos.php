@@ -1,7 +1,7 @@
 <?php
 /*
  * Archivo: views/admin/gestionar_prerequisitos.php
- * Propósito: PÁGINA 5 - Interfaz para asignar prerrequisitos a un curso.
+ * (Botón "Volver" estandarizado con el componente)
  */
 ?>
 <div class="container mt-4">
@@ -29,11 +29,11 @@
 
     <div class="row">
         <div class="col-md-5">
-            <div class="card shadow-sm">
+            <div class.card shadow-sm">
                 <div class="card-header">
-                    <h5 class="mb-0">Añadir Requisito</h5>
+                    <h5 class.mb-0">Añadir Requisito</h5>
                 </div>
-                <div class="card-body">
+                <div class.card-body">
                     <form action="index.php?controller=Academico&action=addPrerequisito" method="POST">
                         <input type="hidden" name="id_curso_principal" value="<?php echo $infoCurso['id_curso']; ?>">
                         <input type="hidden" name="id_plan" value="<?php echo $infoPlan['id_plan_estudio']; ?>">
@@ -84,7 +84,6 @@
         </div>
     </div>
     
-    <a href="index.php?controller=Academico&action=gestionarMalla&id_plan=<?php echo $infoPlan['id_plan_estudio']; ?>" class="btn btn-secondary mt-4">
-        <i class="fas fa-arrow-left me-2"></i> Volver a la Malla
-    </a>
+    <?php include_once VIEW_PATH . 'layouts/boton_volver.php'; ?>
+    
 </div>

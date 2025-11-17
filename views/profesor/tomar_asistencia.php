@@ -1,106 +1,115 @@
 <?php
 /*
  * Archivo: views/profesor/tomar_asistencia.php
- * (Corregido el botón 'Volver')
+ * (AÑADIDA: Lógica para bloquear el formulario si no es la hora)
+ * (CORREGIDO: Errores 'class.')
  */
-$fecha_display = date('d/m/Y', strtotime($fecha));
-function getEstadoClass($estado) {
-    switch ($estado) {
-        case 'Presente': return 'btn-success';
-        case 'Ausente': return 'btn-danger';
-        case 'Tardanza': return 'btn-warning';
-        default: return 'btn-secondary';
-    }
-}
 ?>
 <div class="container mt-4">
-    <h2 class="mb-4">Asistencia: <span class="text-primary"><?php echo htmlspecialchars($curso_info['nombre_curso']); ?></span></h2>
-    <p class="lead">Profesor: <?php echo htmlspecialchars($_SESSION['nombre'] . ' ' . $_SESSION['apellido']); ?></p>
-    <?php 
-    if (isset($_SESSION['mensaje'])): ?>
-        <div class="alert alert-<?php echo $_SESSION['mensaje']['tipo']; ?> alert-dismissible fade show" role="alert">
-            <?php echo $_SESSION['mensaje']['texto']; ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2>Tomar Asistencia:</h2>
+            <h3 class="text-primary"><?php echo htmlspecialchars($curso_info['nombre_curso']); ?></h3>
         </div>
-        <?php unset($_SESSION['mensaje']); ?>
-    <?php endif; ?>
-    <div class="card p-3 mb-4 shadow-sm">
-        <form method="POST" action="index.php?controller=Profesor&action=tomarAsistencia">
-            <input type="hidden" name="id_curso" value="<?php echo htmlspecialchars($id_curso); ?>">
-            <div class="row align-items-end">
-                <div class="col-md-6 mb-3">
-                    <label for="fecha_asistencia" class="form-label fw-bold">Fecha de la Clase</label>
-                    <input type="date" class="form-control" id="fecha_asistencia" name="fecha_asistencia" 
-                           value="<?php echo htmlspecialchars($fecha); ?>" required max="<?php echo date('Y-m-d'); ?>">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <button type="submit" class="btn btn-secondary w-100">
-                        <i class="fas fa-calendar-alt me-2"></i> Cambiar Fecha
-                    </button>
-                </div>
-            </div>
-        </form>
     </div>
-    <h4 class="mb-3">Registro para el día: <span class="badge bg-dark"><?php echo $fecha_display; ?></span></h4>
+    
+    <?php
+    if (isset($_SESSION['mensaje'])) {
+        echo '<div class="alert alert-' . $_SESSION['mensaje']['tipo'] . ' alert-dismissible fade show" role="alert">' . $_SESSION['mensaje']['texto'] . '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
+        unset($_SESSION['mensaje']);
+    }
+    ?>
+
+    <form action="index.php?controller=Profesor&action=tomarAsistencia" method="POST" class="mb-4 p-3 bg-light rounded border">
+        <input type="hidden" name="id_curso" value="<?php echo $curso_info['id_curso']; ?>">
+        <div class="row align-items-end">
+            <div class="col-md-4">
+                <label for="fecha_asistencia" class="form-label"><b>Seleccionar Fecha:</b></label>
+                <input type="date" name="fecha_asistencia" id="fecha_asistencia" class="form-control" value="<?php echo htmlspecialchars($fecha); ?>" required>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-search me-2"></i> Consultar</button>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="index.php?controller=Profesor&action=verHistoricoAsistencia&id_curso=<?php echo $curso_info['id_curso']; ?>" class="btn btn-outline-secondary">
+                    <i class="fas fa-history me-2"></i> Ver Historial Completo
+                </a>
+            </div>
+        </div>
+    </form>
+    
     <?php if ($asistencia_tomada): ?>
-        <div class="alert alert-info">La asistencia de esta fecha ya fue registrada.</div>
-        <ul class="list-group shadow-sm">
-            <?php foreach ($registros_asistencia as $registro): ?>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <?php echo htmlspecialchars($registro['apellido'] . ', ' . $registro['nombre']); ?>
-                    <span class="badge <?php echo getEstadoClass($registro['estado']); ?> rounded-pill p-2">
-                        <?php echo htmlspecialchars($registro['estado']); ?>
-                    </span>
-                </li>
-            <?php endforeach; ?>
-        </ul>
-    <?php elseif (empty($estudiantes)): ?>
-        <div class="alert alert-warning">No hay estudiantes matriculados en este curso.</div>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Estudiante</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($registros_asistencia as $reg): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($reg['nombre'] . ' ' . $reg['apellido']); ?></td>
+                            <td>
+                                <?php
+                                $estado = $reg['estado'];
+                                $badge_class = 'bg-secondary';
+                                if ($estado == 'Presente') $badge_class = 'bg-success';
+                                if ($estado == 'Ausente') $badge_class = 'bg-danger';
+                                if ($estado == 'Tardanza') $badge_class = 'bg-warning text-dark';
+                                echo "<span class='badge {$badge_class}'>{$estado}</span>";
+                                ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+
+    <?php elseif ($asistenciaBloqueada): ?>
+        <div class="alert alert-danger">
+            <h4 class="alert-heading"><i class="fas fa-lock me-2"></i> Asistencia Bloqueada</h4>
+            <p><?php echo $mensajeBloqueo; ?></p>
+        </div>
+
     <?php else: ?>
-        <form method="POST" action="index.php?controller=Profesor&action=guardarAsistencia">
-            <input type="hidden" name="id_curso" value="<?php echo htmlspecialchars($id_curso); ?>">
+        <form action="index.php?controller=Profesor&action=guardarAsistencia" method="POST">
+            <input type="hidden" name="id_curso" value="<?php echo $curso_info['id_curso']; ?>">
             <input type="hidden" name="fecha_asistencia" value="<?php echo htmlspecialchars($fecha); ?>">
             <div class="table-responsive">
-                <table class="table table-striped table-hover align-middle shadow-sm">
+                <table class="table table-striped table-hover">
                     <thead class="table-dark">
                         <tr>
                             <th>Estudiante</th>
-                            <th>Correo Electrónico</th>
-                            <th class="text-center">Estado</th>
+                            <th>Presente</th>
+                            <th>Ausente</th>
+                            <th>Tardanza</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($estudiantes as $estudiante): ?>
+                        <?php foreach ($estudiantes as $est): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($estudiante['apellido'] . ', ' . $estudiante['nombre']); ?></td>
-                                <td><?php echo htmlspecialchars($estudiante['email']); ?></td>
-                                <td class="text-center">
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <input type="radio" class="btn-check" name="asistencia[<?php echo $estudiante['id_usuario']; ?>]" 
-                                               id="p_<?php echo $estudiante['id_usuario']; ?>" value="Presente" autocomplete="off" checked>
-                                        <label class="btn btn-outline-success" for="p_<?php echo $estudiante['id_usuario']; ?>">P</label>
-                                        <input type="radio" class="btn-check" name="asistencia[<?php echo $estudiante['id_usuario']; ?>]" 
-                                               id="a_<?php echo $estudiante['id_usuario']; ?>" value="Ausente" autocomplete="off">
-                                        <label class="btn btn-outline-danger" for="a_<?php echo $estudiante['id_usuario']; ?>">A</label>
-                                        <input type="radio" class="btn-check" name="asistencia[<?php echo $estudiante['id_usuario']; ?>]" 
-                                               id="t_<?php echo $estudiante['id_usuario']; ?>" value="Tardanza" autocomplete="off">
-                                        <label class="btn btn-outline-warning" for="t_<?php echo $estudiante['id_usuario']; ?>">T</label>
-                                    </div>
-                                </td>
+                                <td><?php echo htmlspecialchars($est['nombre'] . ' ' . $est['apellido']); ?></td>
+                                <?php $id_est = $est['id_usuario']; ?>
+                                <td><input class="form-check-input" type="radio" name="asistencia[<?php echo $id_est; ?>]" value="Presente" checked></td>
+                                <td><input class="form-check-input" type="radio" name="asistencia[<?php echo $id_est; ?>]" value="Ausente"></td>
+                                <td><input class="form-check-input" type="radio" name="asistencia[<?php echo $id_est; ?>]" value="Tardanza"></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
-            <button type="submit" class="btn btn-success btn-lg mt-3 w-100">
-                <i class="fas fa-save me-2"></i> Guardar Asistencia del Día (<?php echo $fecha_display; ?>)
-            </button>
+            <div class="d-flex justify-content-between mt-3">
+                <div>
+                    <?php include_once VIEW_PATH . 'layouts/boton_volver.php'; ?>
+                </div>
+                <button type="submit" class="btn btn-success btn-lg"><i class="fas fa-save me-2"></i> Guardar Asistencia</button>
+            </div>
         </form>
     <?php endif; ?>
-    
-    <div class="mt-4">
-        <a href="index.php?controller=Profesor&action=panelCurso&id_curso=<?php echo $curso_info['id_curso']; ?>" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-2"></i> Volver al Curso
-        </a>
-    </div>
+
+    <?php if ($asistencia_tomada || $asistenciaBloqueada): ?>
+        <?php include_once VIEW_PATH . 'layouts/boton_volver.php'; ?>
+    <?php endif; ?>
 </div>

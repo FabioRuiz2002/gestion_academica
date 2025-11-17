@@ -1,7 +1,8 @@
 <?php
 /*
  * Archivo: views/admin/gestionar_cursos.php
- * Propósito: Página independiente para el CRUD de Cursos.
+ * (CORREGIDO: Errores de sintaxis HTML 'class.' por 'class=')
+ * (AÑADIDA: Columna N° e ID)
  */
 ?>
 <div class="container mt-4">
@@ -11,7 +12,8 @@
             <i class="fas fa-plus me-2"></i> Crear Nuevo Curso
         </button>
     </div>
-    <p>Este es el repositorio general de todos los cursos. Para asignarlos a una malla, ve a "Gestión Académica".</p>
+    <p>Este es el repositorio general de todos los cursos. Aquí es donde se crea un curso y se le asigna un profesor.</p>
+    <p>Luego, en "Gestión Académica", se asigna ese curso a una malla.</p>
 
     <?php
     if (isset($_SESSION['error_message_curso'])) {
@@ -24,6 +26,7 @@
         <table class="table table-striped table-hover">
             <thead class="table-dark">
                 <tr>
+                    <th>N°</th>
                     <th>ID</th>
                     <th>Nombre del Curso</th>
                     <th>Horario</th>
@@ -33,18 +36,19 @@
                 </tr>
             </thead>
             <tbody>
-                <?php while ($row = $listaCursos->fetch(PDO::FETCH_ASSOC)): ?>
+                <?php $i = 1; while ($row = $listaCursos->fetch(PDO::FETCH_ASSOC)): ?>
                     <tr>
+                        <td><?php echo $i++; ?></td>
                         <td><?php echo $row['id_curso']; ?></td>
                         <td><?php echo htmlspecialchars($row['nombre_curso']); ?></td>
                         <td><?php echo htmlspecialchars($row['horario']); ?></td>
                         <td><?php echo htmlspecialchars($row['nombre_profesor'] . ' ' . $row['apellido_profesor']); ?></td>
                         <td><?php echo htmlspecialchars($row['anio_academico']); ?></td>
                         <td>
-                            <button class="btn btn-warning btn-sm" onclick="cargarDatosCurso(<?php echo $row['id_curso']; ?>)" data-bs-toggle="modal" data-bs-target="#editarCursoModal">
+                            <button class="btn btn-warning btn-sm" onclick="cargarDatosCurso(<?php echo $row['id_curso']; ?>)" data-bs-toggle="modal" data-bs-target="#editarCursoModal" title="Editar">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-danger btn-sm" onclick="confirmarEliminarCurso(<?php echo $row['id_curso']; ?>)">
+                            <button class="btn btn-danger btn-sm" onclick="confirmarEliminarCurso(<?php echo $row['id_curso']; ?>)" title="Eliminar">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </td>
@@ -53,7 +57,10 @@
             </tbody>
         </table>
     </div>
-    <a href="index.php?controller=Admin&action=index" class="btn btn-secondary mt-3">Volver al Panel Principal</a>
+    
+    <a href="index.php?controller=Admin&action=index" class="btn btn-secondary mt-3">
+        <i class="fas fa-arrow-left me-2"></i> Volver
+    </a>
 </div>
 
 <div class="modal fade" id="crearCursoModal" tabindex="-1">

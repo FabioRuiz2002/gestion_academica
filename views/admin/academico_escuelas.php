@@ -1,7 +1,7 @@
 <?php
 /*
  * Archivo: views/admin/academico_escuelas.php
- * Propósito: PÁGINA 2 - Lista y CRUD de Escuelas para una Facultad.
+ * (Botón "Volver" estandarizado con el componente)
  */
 ?>
 <div class="container mt-4">
@@ -17,10 +17,7 @@
             <h2 class="mb-0">Facultad:</h2>
             <h3 class="text-primary"><?php echo htmlspecialchars($infoFacultad['nombre_facultad']); ?></h3>
         </div>
-        <a href="index.php?controller=Admin&action=index" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-2"></i> Volver al Panel Principal
-        </a>
-    </div>
+        </div>
     <p class="lead">Gestiona las Escuelas Profesionales (carreras) que pertenecen a esta facultad.</p>
     
     <?php
@@ -65,7 +62,7 @@
                                 <button class="btn btn-warning btn-sm" onclick="cargarDatosEscuela(<?php echo $esc['id_escuela']; ?>)" data-bs-toggle="modal" data-bs-target="#editarEscuelaModal">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-danger btn-sm" onclick="confirmarEliminarEscuela(<?php echo $esc['id_escuela']; ?>)">
+                                <button class="btn btn-danger btn-sm" onclick="confirmarEliminarEscuela(<?php echo $esc['id_escuela']; ?>, <?php echo $infoFacultad['id_facultad']; ?>)">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
@@ -74,6 +71,8 @@
                     </tbody>
                 </table>
             </div>
+            
+            <?php include_once VIEW_PATH . 'layouts/boton_volver.php'; ?>
         </div>
     </div>
 </div>
@@ -121,9 +120,12 @@
                     <div class="mb-3">
                         <label for="edit_id_facultad" class="form-label">Facultad</label>
                         <select class="form-select" id="edit_id_facultad" name="edit_id_facultad" required>
-                             <option value="<?php echo $infoFacultad['id_facultad']; ?>"><?php echo htmlspecialchars($infoFacultad['nombre_facultad']); ?></option>
+                             <?php foreach ($listaFacultades as $fac): ?>
+                                <option value="<?php echo $fac['id_facultad']; ?>" <?php echo ($fac['id_facultad'] == $infoFacultad['id_facultad']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($fac['nombre_facultad']); ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
-                        <small>Para mover a otra facultad, edita las facultades primero.</small>
                     </div>
                     <div class="mb-3">
                         <label for="edit_nombre_escuela" class="form-label">Nombre de la Escuela</label>
@@ -152,13 +154,12 @@ function cargarDatosEscuela(id) {
             }
         });
 }
-function confirmarEliminarEscuela(id) {
+function confirmarEliminarEscuela(id, id_facultad) {
     if (confirm('¿Estás seguro de que deseas eliminar esta escuela? Solo funcionará si no tiene planes de estudio asociados.')) {
         fetch('index.php?controller=Academico&action=eliminarEscuela', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            // Pasamos el ID de la facultad para la redirección
-            body: 'id=' + id + '&id_facultad_redirect=<?php echo $infoFacultad['id_facultad']; ?>'
+            body: 'id=' + id + '&id_facultad_redirect=' + id_facultad
         })
         .then(response => response.json())
         .then(data => {

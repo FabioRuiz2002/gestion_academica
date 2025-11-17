@@ -1,8 +1,8 @@
 <?php
 /*
  * Archivo: controllers/ProfesorController.php
- * (CORREGIDO: Errores de sintaxis)
- * (ACTUALIZADO: 'index' usa cursos agrupados)
+ * (AÑADIDA: Lógica para restringir asistencia a la hora de clase)
+ * (CORREGIDOS: Todos los errores de sintaxis 'this-' y 'this.')
  */
 
 require_once MODEL_PATH . 'Curso.php';
@@ -43,17 +43,48 @@ class ProfesorController {
     }
 
     /**
-     * ACCIÓN PRINCIPAL (MODIFICADA)
+     * NUEVA FUNCIÓN PRIVADA
+     * Comprueba si la hora actual está dentro del horario del curso.
+     * $horarioString es "Lu 8-10, Mi 8-11"
      */
+    private function esHoraDeClase($horarioString) {
+        if (empty($horarioString)) {
+            return false; // Si no hay horario, no se puede tomar asistencia.
+        }
+
+        $diaActual = date('N'); // 1 (Lunes) a 7 (Domingo)
+        $horaActual = date('G'); // 0 a 23
+
+        $mapaDias = [
+            'Lu' => 1, 'Ma' => 2, 'Mi' => 3, 'Ju' => 4, 'Vi' => 5, 'Sa' => 6, 'Do' => 7
+        ];
+        
+        $esHoraDeClase = false;
+        
+        // Usamos RegEx para extraer los bloques de horario
+        // (Lu|Ma|Mi|Ju|Vi|Sa|Do) (\d{1,2})-(\d{1,2})
+        if (preg_match_all('/(Lu|Ma|Mi|Ju|Vi|Sa|Do) (\d{1,2})-(\d{1,2})/', $horarioString, $matches, PREG_SET_ORDER)) {
+            
+            foreach ($matches as $match) {
+                // $match[1] = "Lu", $match[2] = "8", $match[3] = "10"
+                $diaClaseNum = $mapaDias[$match[1]] ?? null;
+                $horaInicio = (int)$match[2];
+                $horaFin = (int)$match[3]; // El rango es [inicio, fin)
+
+                if ($diaClaseNum == $diaActual && $horaActual >= $horaInicio && $horaActual < $horaFin) {
+                    $esHoraDeClase = true;
+                    break;
+                }
+            }
+        }
+        return $esHoraDeClase;
+    }
+
+
     public function index() {
         $id_profesor = $_SESSION['id_usuario'];
-        
-        // 1. Cargar cursos (NUEVA FUNCIÓN)
         $cursosAgrupados = $this->curso->readCursosAgrupadosPorProfesor($id_profesor);
-        
-        // 2. Cargar entregas pendientes (Widget)
         $listaEntregasPendientes = $this->entrega->readEntregasRecientesPorProfesor($id_profesor);
-        
         require_once VIEW_PATH . 'layouts/header.php';
         require_once VIEW_PATH . 'profesor/bienvenida_profesor.php'; 
         require_once VIEW_PATH . 'layouts/footer.php';
@@ -71,10 +102,7 @@ class ProfesorController {
         require_once VIEW_PATH . 'layouts/footer.php';
     }
 
-    // -------------------------------------------------------------------
     // --- ACCIONES DE LIBRO DE CALIFICACIONES ---
-    // -------------------------------------------------------------------
-
     public function libroCalificaciones() {
         if (!isset($_GET['id_curso'])) {
             header('Location: index.php?controller=Profesor&action=index');
@@ -85,7 +113,6 @@ class ProfesorController {
         $infoCurso = $this->curso->readOne($id_curso);
         $listaEstudiantes = $this->matricula->readEstudiantesPorCurso($id_curso);
         $calificaciones = $this->calificacion->readPorCurso($id_curso);
-        
         require_once VIEW_PATH . 'layouts/header.php';
         require_once VIEW_PATH . 'profesor/libro_calificaciones.php';
         require_once VIEW_PATH . 'layouts/footer.php';
@@ -95,13 +122,11 @@ class ProfesorController {
         $id_curso = $_POST['id_curso'] ?? 0;
         if ($_SERVER['REQUEST_METHOD'] == 'POST' && $id_curso > 0 && isset($_POST['calificaciones'])) {
             $calificaciones_post = $_POST['calificaciones'];
-            
             foreach ($calificaciones_post as $id_estudiante => $notas) {
                 $this->calificacion->id_curso = $id_curso;
                 $this->calificacion->id_estudiante = $id_estudiante; 
                 $this->calificacion->nota1 = $notas['nota1'] ?? 0;
                 $this->calificacion->nota2 = $notas['nota2'] ?? 0;
-                
                 $this->calificacion->guardar();
             }
             $_SESSION['success_message'] = "¡Notas 1 y 2 guardadas exitosamente!";
@@ -127,9 +152,7 @@ class ProfesorController {
         exit();
     }
 
-    // -------------------------------------------------------------------
-    // --- ACCIONES DE ASISTENCIA ---
-    // -------------------------------------------------------------------
+    // --- ACCIONES DE ASISTENCIA (MODIFICADAS) ---
     
     public function tomarAsistencia() {
         $id_curso = isset($_GET['id_curso']) ? $_GET['id_curso'] : (isset($_POST['id_curso']) ? $_POST['id_curso'] : null);
@@ -138,14 +161,30 @@ class ProfesorController {
              header('Location: index.php?controller=Profesor&action=index');
              exit();
         }
+        
         $curso_info = $this->curso->readOne($id_curso);
         $estudiantes = $this->matricula->readEstudiantesPorCurso($id_curso);
         $asistencia_tomada = $this->asistencia->checkAsistenciaTomada($id_curso, $fecha);
+        
+        // --- INICIO DE LÓGICA DE RESTRICCIÓN ---
+        $asistenciaBloqueada = false;
+        $mensajeBloqueo = "";
+        
+        if ($fecha != date('Y-m-d')) {
+            $asistenciaBloqueada = true;
+            $mensajeBloqueo = "La asistencia solo se puede tomar para el día de HOY (" . date('d/m/Y') . ").";
+        } else if (!$this->esHoraDeClase($curso_info['horario'])) {
+            $asistenciaBloqueada = true;
+            $mensajeBloqueo = "La asistencia solo se puede tomar durante el horario de clase programado (" . htmlspecialchars($curso_info['horario']) . ").";
+        }
+        // --- FIN DE LÓGICA DE RESTRICCIÓN ---
+        
         $registros_asistencia = [];
         if ($asistencia_tomada) {
             $registros_asistencia = $this->asistencia->readAsistenciaPorFecha($id_curso, $fecha);
             $_SESSION['mensaje'] = ['tipo' => 'warning', 'texto' => "La asistencia para el curso <b>{$curso_info['nombre_curso']}</b> en la fecha <b>{$fecha}</b> ya fue registrada."];
         }
+        
         require_once VIEW_PATH . 'layouts/header.php';
         require_once VIEW_PATH . 'profesor/tomar_asistencia.php'; 
         require_once VIEW_PATH . 'layouts/footer.php';
@@ -153,9 +192,24 @@ class ProfesorController {
 
     public function guardarAsistencia() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_curso']) && isset($_POST['fecha_asistencia']) && isset($_POST['asistencia'])) {
+            
             $id_curso = $_POST['id_curso'];
             $fecha = $_POST['fecha_asistencia'];
             $asistencias = $_POST['asistencia'];
+
+            $curso_info = $this->curso->readOne($id_curso);
+            
+            // --- INICIO DE VALIDACIÓN DE SEGURIDAD ---
+            $esHoy = ($fecha == date('Y-m-d'));
+            $esHora = $this->esHoraDeClase($curso_info['horario']);
+            
+            if (!$esHoy || !$esHora) {
+                $_SESSION['mensaje'] = ['tipo' => 'danger', 'texto' => 'Error: La asistencia solo se puede registrar HOY y durante el horario de clase.'];
+                header("Location: index.php?controller=Profesor&action=tomarAsistencia&id_curso={$id_curso}");
+                exit();
+            }
+            // --- FIN DE VALIDACIÓN DE SEGURIDAD ---
+
             if ($this->asistencia->checkAsistenciaTomada($id_curso, $fecha)) {
                 $_SESSION['mensaje'] = ['tipo' => 'danger', 'texto' => 'Error: La asistencia para esta fecha ya fue registrada anteriormente.'];
             } 
@@ -164,6 +218,7 @@ class ProfesorController {
             } else {
                 $_SESSION['mensaje'] = ['tipo' => 'danger', 'texto' => 'Hubo un error al guardar la asistencia. Intente nuevamente.'];
             }
+            
             header("Location: index.php?controller=Profesor&action=tomarAsistencia&id_curso={$id_curso}");
             exit();
         } else {
@@ -202,10 +257,7 @@ class ProfesorController {
         require_once VIEW_PATH . 'layouts/footer.php';
     }
 
-    // -------------------------------------------------------------------
     // --- ACCIONES DE MATERIALES ---
-    // -------------------------------------------------------------------
-    
     public function gestionarMateriales() {
         if (!isset($_GET['id_curso'])) {
             header('Location: index.php?controller=Profesor&action=index');
@@ -279,10 +331,7 @@ class ProfesorController {
         exit();
     }
 
-    // -------------------------------------------------------------------
     // --- ACCIONES DE TAREAS ---
-    // -------------------------------------------------------------------
-
     public function gestionarTareas() {
         if (!isset($_GET['id_curso'])) {
             header('Location: index.php?controller=Profesor&action=index');
@@ -349,10 +398,6 @@ class ProfesorController {
         require_once VIEW_PATH . 'layouts/footer.php';
     }
     
-    // -------------------------------------------------------------------
-    // --- ACCIÓN DE CALIFICAR TAREAS ---
-    // -------------------------------------------------------------------
-    
     public function calificarEntrega() {
         $id_tarea = $_POST['id_tarea'] ?? 0;
         $id_entrega = $_POST['id_entrega'] ?? 0;
@@ -374,6 +419,69 @@ class ProfesorController {
         
         header('Location: index.php?controller=Profesor&action=verEntregas&id_tarea=' . $id_tarea);
         exit();
+    }
+
+    // --- ACCIÓN: REPORTE PDF DEL CURSO ---
+    public function generarReporteCurso() {
+        if (!isset($_GET['id_curso'])) {
+            header('Location: index.php?controller=Profesor&action=index');
+            exit();
+        }
+        $id_curso = $_GET['id_curso'];
+        
+        require_once ROOT_PATH . 'lib/fpdf/fpdf.php';
+
+        $infoCurso = $this->curso->readOne($id_curso);
+        $listaEstudiantes = $this->matricula->readEstudiantesPorCurso($id_curso);
+        $calificaciones = $this->calificacion->readPorCurso($id_curso);
+
+        $pdf = new FPDF('L', 'mm', 'A4');
+        $pdf->AddPage();
+        $pdf->SetFont('Arial', 'B', 16);
+        
+        $titulo = 'SÁBANA DE NOTAS';
+        $nombre_curso = 'Curso: ' . $infoCurso['nombre_curso'];
+        
+        $pdf->Cell(0, 10, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', $titulo), 0, 1, 'C');
+        $pdf->SetFont('Arial', '', 12);
+        $pdf->Cell(0, 10, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', $nombre_curso), 0, 1, 'C');
+        $pdf->Ln(10);
+
+        $pdf->SetFont('Arial', 'B', 10);
+        $pdf->SetFillColor(230, 230, 230); 
+        $pdf->Cell(100, 8, 'Estudiante', 1, 0, 'C', true);
+        $pdf->Cell(25, 8, 'Nota 1', 1, 0, 'C', true);
+        $pdf->Cell(25, 8, 'Nota 2', 1, 0, 'C', true);
+        $pdf->Cell(30, 8, 'Prom. Tareas', 1, 0, 'C', true);
+        $pdf->Cell(30, 8, 'Prom. Final', 1, 0, 'C', true);
+        $pdf->Cell(30, 8, 'Estado', 1, 1, 'C', true);
+        
+        $pdf->SetFont('Arial', '', 9);
+        if (empty($listaEstudiantes)) {
+            $pdf->Cell(0, 10, 'No hay estudiantes matriculados.', 1, 1, 'C');
+        } else {
+            foreach ($listaEstudiantes as $est) {
+                $id_est = $est['id_usuario'];
+                $notas = $calificaciones[$id_est] ?? null;
+                $n1 = $notas['nota1'] ?? 0;
+                $n2 = $notas['nota2'] ?? 0;
+                $n3 = $notas['nota3'] ?? 0;
+                $prom = ($n1 + $n2 + $n3) / 3;
+                $estado = ($prom >= 10.5) ? 'Aprobado' : 'Desaprobado';
+                $nombre_completo = $est['apellido'] . ', ' . $est['nombre'];
+                
+                $pdf->Cell(100, 7, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', $nombre_completo), 1);
+                $pdf->Cell(25, 7, number_format($n1, 2), 1, 0, 'C');
+                $pdf->Cell(25, 7, number_format($n2, 2), 1, 0, 'C');
+                $pdf->Cell(30, 7, number_format($n3, 2), 1, 0, 'C');
+                $pdf->Cell(30, 7, number_format($prom, 2), 1, 0, 'C');
+                $pdf->Cell(30, 7, $estado, 1, 1, 'C');
+            }
+        }
+        
+        $pdf_filename = 'Reporte_Notas_' . preg_replace('/[^a-zA-Z0-9]/', '_', $infoCurso['nombre_curso']) . '.pdf';
+        $pdf->Output('D', $pdf_filename);
+        exit;
     }
 }
 ?>

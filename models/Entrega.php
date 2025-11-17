@@ -1,15 +1,13 @@
 <?php
 /*
  * Archivo: models/Entrega.php
- * Propósito: Modelo para la gestión de Entregas de tareas.
- * (Añadida la función 'getPromedioDeTareas')
+ * (CORREGIDO error 'this-')
  */
 class Entrega {
     
     private $conn;
     private $table_name = "entregas";
 
-    // ... (propiedades) ...
     public $id_entrega;
     public $id_tarea;
     public $id_estudiante;
@@ -18,13 +16,11 @@ class Entrega {
     public $calificacion;
     public $comentario_profesor;
 
-
     public function __construct($db) {
         $this->conn = $db;
     }
 
     public function readPorTarea($id_tarea) {
-        // ... (código existente) ...
         try {
             $query = "SELECT 
                         e.*, 
@@ -46,7 +42,6 @@ class Entrega {
     }
 
     public function readPorEstudianteYCurso($id_estudiante, $id_curso) {
-        // ... (código existente) ...
         try {
             $query = "SELECT e.*, t.titulo
                       FROM " . $this->table_name . " e
@@ -65,7 +60,6 @@ class Entrega {
     }
 
     public function crear() {
-        // ... (código existente) ...
         try {
             $checkQuery = "SELECT id_entrega FROM " . $this->table_name . " WHERE id_tarea = :id_tarea AND id_estudiante = :id_estudiante";
             $checkStmt = $this->conn->prepare($checkQuery);
@@ -91,7 +85,6 @@ class Entrega {
     }
     
     public function calificar() {
-        // ... (código existente) ...
         try {
             $query = "UPDATE " . $this->table_name . " SET
                         calificacion = :calificacion,
@@ -109,10 +102,6 @@ class Entrega {
         } catch (PDOException $e) { return false; }
     }
 
-    /**
-     * NUEVA FUNCIÓN
-     * Calcula el promedio de las tareas calificadas de un estudiante para un curso.
-     */
     public function getPromedioDeTareas($id_estudiante, $id_curso) {
         try {
             $query = "SELECT AVG(e.calificacion) as promedio
@@ -120,26 +109,16 @@ class Entrega {
                       JOIN tareas t ON e.id_tarea = t.id_tarea
                       WHERE e.id_estudiante = :id_estudiante 
                         AND t.id_curso = :id_curso 
-                        AND e.calificacion IS NOT NULL"; // Solo tareas calificadas
-
+                        AND e.calificacion IS NOT NULL";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':id_estudiante', $id_estudiante);
             $stmt->bindParam(':id_curso', $id_curso);
             $stmt->execute();
-            
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            // Si no hay tareas calificadas, devuelve 0
             return $row['promedio'] ?? 0; 
-
-        } catch (PDOException $e) {
-            return 0;
-        }
+        } catch (PDOException $e) { return 0; }
     }
-    /**
-     * NUEVA FUNCIÓN
-     * Busca las 5 entregas más recientes sin calificar para un profesor.
-     */
+    
     public function readEntregasRecientesPorProfesor($id_profesor) {
         try {
             $query = "SELECT 
@@ -157,18 +136,15 @@ class Entrega {
                         usuarios u ON e.id_estudiante = u.id_usuario
                       WHERE 
                         c.id_profesor = :id_profesor
-                        AND e.calificacion IS NULL      -- Entregas SIN calificar
+                        AND e.calificacion IS NULL
                       ORDER BY 
                         e.fecha_entrega DESC
                       LIMIT 5";
-            
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':id_profesor', $id_profesor);
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            return [];
-        }
+        } catch (PDOException $e) { return []; }
     }
 }
 ?>

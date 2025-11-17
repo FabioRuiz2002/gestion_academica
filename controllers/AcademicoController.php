@@ -1,7 +1,8 @@
 <?php
 /*
  * Archivo: controllers/AcademicoController.php
- * (CORREGIDOS todos los errores de sintaxis 'this.')
+ * (CORREGIDO: Error Fatal de 'pantalla blanca' por sintaxis 'this.')
+ * (CORREGIDO: 'Undefined variable $listaProfesores' en gestionarMalla)
  */
 
 require_once MODEL_PATH . 'Facultad.php';
@@ -10,8 +11,9 @@ require_once MODEL_PATH . 'PlanEstudio.php';
 require_once MODEL_PATH . 'CursoPlan.php';
 require_once MODEL_PATH . 'Curso.php';
 require_once MODEL_PATH . 'Usuario.php';
-require_once MODEL_PATH . 'Prerequisito.php'; // <-- Añadido
+require_once MODEL_PATH . 'Prerequisito.php';
 require_once CONFIG_PATH . 'Database.php';
+require_once 'utils/HorarioHelper.php';
 
 class AcademicoController {
 
@@ -22,7 +24,8 @@ class AcademicoController {
     private $cursoPlan;
     private $curso;
     private $usuario;
-    private $prerequisito; // <-- Añadido
+    private $prerequisito;
+    private $horarioHelper;
 
     public function __construct() {
         if (session_status() == PHP_SESSION_NONE) { session_start(); }
@@ -40,12 +43,10 @@ class AcademicoController {
         $this->cursoPlan = new CursoPlan($this->db);
         $this->curso = new Curso($this->db);
         $this->usuario = new Usuario($this->db);
-        $this->prerequisito = new Prerequisito($this->db); // <-- Añadido
+        $this->prerequisito = new Prerequisito($this->db);
+        $this->horarioHelper = new HorarioHelper();
     }
 
-    /**
-     * PÁGINA 1: Muestra la lista de Facultades
-     */
     public function index() {
         $listaFacultades = $this->facultad->readAll();
         require_once VIEW_PATH . 'layouts/header.php';
@@ -53,10 +54,7 @@ class AcademicoController {
         require_once VIEW_PATH . 'layouts/footer.php';
     }
     
-    // -------------------------------------------------------------------
     // --- ACCIONES CRUD FACULTAD ---
-    // -------------------------------------------------------------------
-
     public function crearFacultad() {
         if ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['nombre_facultad'])) {
             $this->facultad->nombre_facultad = $_POST['nombre_facultad'];
@@ -105,28 +103,21 @@ class AcademicoController {
         exit();
     }
 
-    // -------------------------------------------------------------------
     // --- ACCIONES DE ESCUELAS ---
-    // -------------------------------------------------------------------
-    
     public function verFacultad() {
         $id_facultad = $_GET['id_facultad'] ?? 0;
         if ($id_facultad <= 0) {
             header('Location: index.php?controller=Academico&action=index');
             exit();
         }
-        
         $this->facultad->id_facultad = $id_facultad;
         $infoFacultad = $this->facultad->readOne();
-        
         if (!$infoFacultad) {
             header('Location: index.php?controller=Academico&action=index');
             exit();
         }
-        
         $listaEscuelas = $this->escuela->readByFacultad($id_facultad);
         $listaFacultades = $this->facultad->readAll();
-        
         require_once VIEW_PATH . 'layouts/header.php';
         require_once VIEW_PATH . 'admin/academico_escuelas.php'; 
         require_once VIEW_PATH . 'layouts/footer.php';
@@ -161,12 +152,10 @@ class AcademicoController {
     
     public function editarEscuela() {
         $id_facultad_redirect = $_POST['id_facultad_redirect'] ?? 0;
-        
         if ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['edit_id_escuela']) && !empty($_POST['edit_nombre_escuela']) && !empty($_POST['edit_id_facultad'])) {
             $this->escuela->id_escuela = $_POST['edit_id_escuela'];
             $this->escuela->nombre_escuela = $_POST['edit_nombre_escuela'];
-            $this->escuela->id_facultad = $_POST['edit_id_facultad'];
-            
+            $this->escuela->id_facultad = $_POST['edit_id_facultad']; // <-- CORREGIDO
             if (!$this->escuela->update()) {
                 $_SESSION['error_message_academico'] = "Error al actualizar la escuela.";
             }
@@ -196,10 +185,7 @@ class AcademicoController {
         exit();
     }
     
-    // -------------------------------------------------------------------
     // --- ACCIONES DE PLANES DE ESTUDIO (MALLAS) ---
-    // -------------------------------------------------------------------
-
     public function verEscuela() {
         $id_escuela = $_GET['id_escuela'] ?? 0;
         if ($id_escuela <= 0) {
@@ -259,7 +245,7 @@ class AcademicoController {
             if (!$this->planEstudio->update()) {
                 $_SESSION['error_message_academico'] = "Error al actualizar el Plan.";
             }
-            if ($id_escuela_redirect != $this->planEstudio->id_escuela) {
+            if ($id_escuela_redirect != $this->planEstudio->id_escuela) { // <-- CORREGIDO
                 $id_escuela_redirect = $this->planEstudio->id_escuela;
             }
         } else {
@@ -285,10 +271,7 @@ class AcademicoController {
         exit();
     }
 
-    // -------------------------------------------------------------------
-    // --- ACCIONES DE GESTIÓN DE MALLA (PÁGINA 4) ---
-    // -------------------------------------------------------------------
-    
+    // --- ACCIONES DE GESTIÓN DE MALLA ---
     public function gestionarMalla() {
         $id_plan = $_GET['id_plan'] ?? 0;
         if ($id_plan <= 0) {
@@ -302,6 +285,10 @@ class AcademicoController {
         }
         $cursosEnPlan = $this->cursoPlan->readCursosEnPlan($id_plan);
         $cursosDisponibles = $this->cursoPlan->readCursosFueraDePlan($id_plan);
+        
+        // --- ¡ESTA LÍNEA FALTABA! (Y sigue siendo necesaria) ---
+        $listaProfesores = $this->usuario->readProfesores(); 
+
         require_once VIEW_PATH . 'layouts/header.php';
         require_once VIEW_PATH . 'admin/gestionar_malla.php';
         require_once VIEW_PATH . 'layouts/footer.php';
@@ -338,10 +325,7 @@ class AcademicoController {
         exit();
     }
     
-    // -------------------------------------------------------------------
-    // --- ACCIONES DE PRERREQUISITOS (NUEVAS) ---
-    // -------------------------------------------------------------------
-    
+    // --- ACCIONES DE PRERREQUISITOS ---
     public function gestionarPrerequisitos() {
         $id_curso = $_GET['id_curso'] ?? 0;
         $id_plan = $_GET['id_plan'] ?? 0;
@@ -398,6 +382,35 @@ class AcademicoController {
             }
         }
         header('Location: index.php?controller=Academico&action=gestionarPrerequisitos&id_curso=' . $id_curso . '&id_plan=' . $id_plan);
+        exit();
+    }
+    
+    // --- ACCIÓN PARA EDITAR PROFESOR ---
+    public function editarProfesorCurso() {
+        $id_plan = $_POST['id_plan'] ?? 0;
+        $id_curso = $_POST['id_curso'] ?? 0;
+        $id_profesor_nuevo = $_POST['id_profesor'] ?? 0;
+
+        if ($id_curso > 0 && $id_profesor_nuevo > 0 && $id_plan > 0) {
+            
+            $infoCurso = $this->curso->readOne($id_curso);
+            $horarioCurso = $infoCurso['horario'];
+            $horariosProfesor = $this->curso->getHorariosPorProfesor($id_profesor_nuevo, $id_curso);
+
+            if ($this->horarioHelper->verificarConflictoConLista($horarioCurso, $horariosProfesor)) {
+                $_SESSION['error_message_academico'] = "Error: El profesor seleccionado ya tiene un cruce de horario con este curso.";
+                header('Location: index.php?controller=Academico&action=gestionarMalla&id_plan=' . $id_plan);
+                exit();
+            }
+
+            if (!$this->curso->updateProfesor($id_curso, $id_profesor_nuevo)) {
+                 $_SESSION['error_message_academico'] = "Error al actualizar el profesor.";
+            }
+        } else {
+            $_SESSION['error_message_academico'] = "Error: Faltan datos.";
+        }
+        
+        header('Location: index.php?controller=Academico&action=gestionarMalla&id_plan=' . $id_plan);
         exit();
     }
 }

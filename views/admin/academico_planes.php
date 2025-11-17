@@ -1,7 +1,7 @@
 <?php
 /*
  * Archivo: views/admin/academico_planes.php
- * Propósito: PÁGINA 3 - Lista y CRUD de Planes para una Escuela.
+ * (Botón "Volver" estandarizado con el componente)
  */
 ?>
 <div class="container mt-4">
@@ -18,10 +18,7 @@
             <h2 class="mb-0">Escuela:</h2>
             <h3 class="text-primary"><?php echo htmlspecialchars($infoEscuela['nombre_escuela']); ?></h3>
         </div>
-        <a href="index.php?controller=Admin&action=index" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-2"></i> Volver al Panel Principal
-        </a>
-    </div>
+        </div>
     <p class="lead">Gestiona los Planes de Estudio (Mallas Curriculares) que pertenecen a esta escuela.</p>
     
     <?php
@@ -68,7 +65,7 @@
                                 <button class="btn btn-warning btn-sm" onclick="cargarDatosPlan(<?php echo $plan['id_plan_estudio']; ?>)" data-bs-toggle="modal" data-bs-target="#editarPlanModal">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-danger btn-sm" onclick="confirmarEliminarPlan(<?php echo $plan['id_plan_estudio']; ?>)">
+                                <button class="btn btn-danger btn-sm" onclick="confirmarEliminarPlan(<?php echo $plan['id_plan_estudio']; ?>, <?php echo $infoEscuela['id_escuela']; ?>)">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
@@ -77,6 +74,8 @@
                     </tbody>
                 </table>
             </div>
+            
+            <?php include_once VIEW_PATH . 'layouts/boton_volver.php'; ?>
         </div>
     </div>
 </div>
@@ -126,7 +125,7 @@
                     <input type="hidden" name="id_escuela_redirect" value="<?php echo $infoEscuela['id_escuela']; ?>">
                     
                     <div class="mb-3">
-                        <label for="edit_id_escuela" class="form-label">Escuela</Telebel>
+                        <label for="edit_id_escuela" class="form-label">Escuela</label>
                         <select class="form-select" id="edit_id_escuela" name="edit_id_escuela" required>
                             <?php foreach ($listaEscuelas as $esc): ?>
                                 <option value="<?php echo $esc['id_escuela']; ?>" <?php echo ($esc['id_escuela'] == $infoEscuela['id_escuela']) ? 'selected' : ''; ?>>
@@ -167,12 +166,12 @@ function cargarDatosPlan(id) {
             }
         });
 }
-function confirmarEliminarPlan(id) {
+function confirmarEliminarPlan(id, id_escuela) {
     if (confirm('¿Estás seguro de que deseas eliminar este Plan de Estudio? Solo funcionará si no tiene cursos o estudiantes asociados.')) {
         fetch('index.php?controller=Academico&action=eliminarPlan', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'id=' + id
+            body: 'id=' + id + '&id_escuela_redirect=' + id_escuela
         })
         .then(response => response.json())
         .then(data => {

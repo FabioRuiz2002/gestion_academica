@@ -1,14 +1,15 @@
 <?php
 /*
  * Archivo: views/admin/academico_facultades.php
- * Propósito: PÁGINA 1 - Lista y CRUD de Facultades.
+ * (Botón "Volver" estandarizado)
  */
 ?>
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="mb-0">Gestión Académica: Facultades</h2>
+        
         <a href="index.php?controller=Admin&action=index" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-2"></i> Volver al Panel Principal
+            <i class="fas fa-arrow-left me-2"></i> Volver
         </a>
     </div>
     <p class="lead">Este es el primer nivel. Haz clic en "Ver Escuelas" para gestionar las carreras de una facultad.</p>

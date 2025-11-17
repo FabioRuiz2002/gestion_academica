@@ -1,8 +1,8 @@
 <?php
 /*
  * Archivo: models/Curso.php
- * Propósito: Modelo para la entidad Curso.
- * (Función de profesor mejorada para agrupar por malla)
+ * (AÑADIDA: 'getHorariosPorProfesor' y 'updateProfesor')
+ * (CORREGIDOS: todos los errores 'this.')
  */
 class Curso {
     
@@ -20,13 +20,42 @@ class Curso {
         $this->conn = $db;
     }
 
+    public function updateProfesor($id_curso, $id_profesor) {
+        try {
+            $query = "UPDATE " . $this->table_name . " SET id_profesor = :id_profesor WHERE id_curso = :id_curso";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':id_profesor', $id_profesor);
+            $stmt->bindParam(':id_curso', $id_curso);
+            return $stmt->execute();
+        } catch (PDOException $e) { return false; }
+    }
+
     /**
-     * FUNCIÓN NUEVA Y MEJORADA
-     * Lee todos los cursos de un profesor, agrupados por Facultad, Escuela, Plan y Ciclo.
+     * NUEVA FUNCIÓN
+     * Obtiene todos los horarios de un profesor, EXCLUYENDO un curso (para editar)
      */
+    public function getHorariosPorProfesor($id_profesor, $excluir_id_curso = 0) {
+        try {
+            $query = "SELECT horario FROM " . $this->table_name . "
+                      WHERE id_profesor = :id_profesor 
+                      AND id_curso != :excluir_id_curso";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':id_profesor', $id_profesor);
+            $stmt->bindParam(':excluir_id_curso', $excluir_id_curso);
+            $stmt->execute();
+            
+            $horarios = [];
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $horarios[] = $row['horario'];
+            }
+            return $horarios;
+        } catch (PDOException $e) {
+            return [];
+        }
+    }
+
     public function readCursosAgrupadosPorProfesor($id_profesor) {
         try {
-            // Consulta compleja que une 5 tablas
             $query = "SELECT 
                         f.nombre_facultad,
                         esc.nombre_escuela,
@@ -35,13 +64,13 @@ class Curso {
                         c.id_curso, c.nombre_curso, c.horario
                     FROM 
                         cursos c
-                    JOIN 
+                    LEFT JOIN 
                         cursos_plan cp ON c.id_curso = cp.id_curso
-                    JOIN 
+                    LEFT JOIN 
                         planes_estudio p ON cp.id_plan_estudio = p.id_plan_estudio
-                    JOIN 
+                    LEFT JOIN 
                         escuelas esc ON p.id_escuela = esc.id_escuela
-                    JOIN 
+                    LEFT JOIN 
                         facultades f ON esc.id_facultad = f.id_facultad
                     WHERE 
                         c.id_profesor = :id_profesor
@@ -51,27 +80,19 @@ class Curso {
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':id_profesor', $id_profesor);
             $stmt->execute();
-            
             $cursosAgrupados = [];
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                // Creamos una estructura de array anidada
                 $cursosAgrupados
-                    [$row['nombre_facultad']]
-                    [$row['nombre_escuela']]
-                    [$row['nombre_plan']]
-                    [$row['ciclo']][] = $row;
+                    [$row['nombre_facultad'] ?? 'Cursos sin Asignar a Facultad']
+                    [$row['nombre_escuela'] ?? 'Cursos sin Asignar a Escuela']
+                    [$row['nombre_plan'] ?? 'Cursos sin Asignar a Plan']
+                    [$row['ciclo'] ?? 'N/A'][] = $row;
             }
             return $cursosAgrupados;
-
-        } catch (PDOException $e) {
-            return [];
-        }
+        } catch (PDOException $e) { return []; }
     }
     
-    // --- (Funciones CRUD para el Admin) ---
-
     public function readAll() {
-        // ... (código existente) ...
         try {
             $query = "SELECT c.*, u.nombre AS nombre_profesor, u.apellido AS apellido_profesor 
                       FROM " . $this->table_name . " c
@@ -84,7 +105,6 @@ class Curso {
     }
 
     public function readOne($id_curso) {
-        // ... (código existente) ...
         try {
             $query = "SELECT * FROM " . $this->table_name . " WHERE id_curso = ? LIMIT 1";
             $stmt = $this->conn->prepare($query);
@@ -95,7 +115,6 @@ class Curso {
     }
 
     public function crear() {
-        // ... (código existente) ...
         try {
             $query = "INSERT INTO " . $this->table_name . " (nombre_curso, descripcion, horario, id_profesor, anio_academico) 
                       VALUES (:nombre, :descripcion, :horario, :id_profesor, :anio)";
@@ -115,7 +134,6 @@ class Curso {
     }
 
     public function update() {
-        // ... (código existente) ...
         try {
             $query = "UPDATE " . $this->table_name . " SET
                         nombre_curso = :nombre,
@@ -142,7 +160,6 @@ class Curso {
     }
 
     public function delete() {
-        // ... (código existente) ...
         try {
             $query = "DELETE FROM " . $this->table_name . " WHERE id_curso = :id_curso";
             $stmt = $this->conn->prepare($query);
@@ -153,7 +170,6 @@ class Curso {
     }
 
     public function countTotal() {
-        // ... (código existente) ...
         try {
             $query = "SELECT COUNT(*) as total FROM " . $this->table_name;
             $stmt = $this->conn->prepare($query);

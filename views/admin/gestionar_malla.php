@@ -1,7 +1,8 @@
 <?php
 /*
  * Archivo: views/admin/gestionar_malla.php
- * (Añadido botón de 'Prerrequisitos')
+ * (CORREGIDO: Errores 'class.')
+ * (CORREGIDO: 'Undefined variable $listaProfesores' en el modal)
  */
 ?>
 <div class="container mt-4">
@@ -86,15 +87,27 @@
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
                                 <?php echo htmlspecialchars($curso['nombre_curso']); ?>
-                                <br><small class="text-muted">Prof: <?php echo htmlspecialchars($curso['nombre_profesor'] . ' ' . $curso['apellido_profesor']); ?></small>
+                                <br>
+                                <small class="text-muted">
+                                    Prof: <?php echo htmlspecialchars($curso['nombre_profesor'] . ' ' . $curso['apellido_profesor']); ?>
+                                    
+                                    <button class="btn btn-link btn-sm p-0 ms-1" 
+                                            onclick="abrirModalProfesor(<?php echo $curso['id_curso']; ?>, <?php echo $curso['id_profesor']; ?>, '<?php echo htmlspecialchars($curso['nombre_curso'], ENT_QUOTES); ?>')"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editarProfesorModal"
+                                            title="Cambiar Profesor">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </small>
                             </div>
                             <div>
                                 <a href="index.php?controller=Academico&action=gestionarPrerequisitos&id_curso=<?php echo $curso['id_curso']; ?>&id_plan=<?php echo $infoPlan['id_plan_estudio']; ?>" 
-                                   class="btn btn-info btn-sm text-white">
+                                   class="btn btn-info btn-sm text-white" title="Prerrequisitos">
                                     <i class="fas fa-code-branch"></i> Req.
                                 </a>
                                 <a href="index.php?controller=Academico&action=quitarCursoPlan&id_cursos_plan=<?php echo $curso['id_cursos_plan']; ?>&id_plan=<?php echo $infoPlan['id_plan_estudio']; ?>" 
                                    class="btn btn-danger btn-sm"
+                                   title="Quitar de la malla"
                                    onclick="return confirm('¿Estás seguro de que deseas quitar este curso de la malla?');">
                                     <i class="fas fa-trash-alt"></i>
                                 </a>
@@ -106,7 +119,52 @@
         </div>
     </div>
     
-    <a href="index.php?controller=Academico&action=verEscuela&id_escuela=<?php echo $infoPlan['id_escuela']; ?>" class="btn btn-secondary mt-4">
-        <i class="fas fa-arrow-left me-2"></i> Volver a Planes de Estudio
-    </a>
+    <?php include_once VIEW_PATH . 'layouts/boton_volver.php'; ?>
+    
 </div>
+
+<div class="modal fade" id="editarProfesorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="index.php?controller=Academico&action=editarProfesorCurso" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title">Cambiar Profesor</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id_plan" value="<?php echo $infoPlan['id_plan_estudio']; ?>">
+                    <input type="hidden" name="id_curso" id="modal_prof_id_curso">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Curso:</label>
+                        <input type="text" class="form-control" id="modal_prof_nombre_curso" disabled>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="modal_prof_id_profesor" class="form-label">Nuevo Profesor:</label>
+                        <select class="form-select" id="modal_prof_id_profesor" name="id_profesor" required>
+                            <option value="">Seleccione un profesor...</option>
+                            <?php foreach ($listaProfesores as $profesor): ?>
+                                <option value="<?php echo $profesor['id_usuario']; ?>">
+                                    <?php echo htmlspecialchars($profesor['nombre'] . ' ' . $profesor['apellido']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function abrirModalProfesor(idCurso, idProfesorActual, nombreCurso) {
+    document.getElementById('modal_prof_id_curso').value = idCurso;
+    document.getElementById('modal_prof_nombre_curso').value = nombreCurso;
+    document.getElementById('modal_prof_id_profesor').value = idProfesorActual;
+}
+</script>

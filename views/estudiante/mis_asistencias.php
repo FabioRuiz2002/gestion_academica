@@ -1,51 +1,63 @@
 <?php
 /*
  * Archivo: views/estudiante/mis_asistencias.php
- * Propósito: Muestra el historial de asistencia (MODIFICADO para un solo curso).
+ * (Botón "Volver" estandarizado con el componente)
  */
-
-function getAsistenciaBadgeEstudiante($estado) {
-    switch ($estado) {
-        case 'Presente': return '<span class="badge bg-success"><i class="fas fa-check me-1"></i> Presente</span>';
-        case 'Ausente': return '<span class="badge bg-danger"><i class="fas fa-times me-1"></i> Ausente</span>';
-        case 'Tardanza': return '<span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i> Tardanza</span>';
-        default: return '<span class="badge bg-secondary">' . htmlspecialchars($estado) . '</span>';
-    }
-}
 ?>
-
 <div class="container mt-4">
-    <h2 class="mb-4"><i class="fas fa-calendar-check me-2"></i> Mi Historial de Asistencia</h2>
-    <h3 class="text-primary"><?php echo htmlspecialchars($infoCurso['nombre_curso']); ?></h3>
+    <h2>Mis Asistencias</h2>
+    <h3 class.text-primary"><?php echo htmlspecialchars($infoCurso['nombre_curso']); ?></h3>
+    <hr>
     
     <?php if (empty($datosAsistencias)): ?>
-        <div class="alert alert-info mt-4">
-            <i class="fas fa-info-circle me-2"></i> Aún no tienes registros de asistencia para este curso.
-        </div>
+        <div class="alert alert-info">Aún no se han registrado asistencias para este curso.</div>
     <?php else: ?>
-        <div class="table-responsive mt-4">
-            <table class="table table-sm table-striped table-hover" style="max-width: 400px;">
-                <thead class="table-light">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
                     <tr>
                         <th>Fecha</th>
                         <th>Estado</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($datosAsistencias as $reg): ?>
+                    <?php 
+                    $total_presente = 0;
+                    $total_ausente = 0;
+                    $total_tardanza = 0;
+                    
+                    foreach ($datosAsistencias as $asistencia): 
+                        $estado = $asistencia['estado'];
+                        $badge_class = 'bg-secondary';
+                        if ($estado == 'Presente') {
+                            $badge_class = 'bg-success';
+                            $total_presente++;
+                        }
+                        if ($estado == 'Ausente') {
+                            $badge_class = 'bg-danger';
+                            $total_ausente++;
+                        }
+                        if ($estado == 'Tardanza') {
+                            $badge_class = 'bg-warning text-dark';
+                            $total_tardanza++;
+                        }
+                    ?>
                         <tr>
-                            <td><?php echo date('d/m/Y', strtotime($reg['fecha'])); ?></td>
-                            <td><?php echo getAsistenciaBadgeEstudiante($reg['estado']); ?></td>
+                            <td><?php echo date('d/m/Y', strtotime($asistencia['fecha'])); ?></td>
+                            <td><span class="badge <?php echo $badge_class; ?> fs-6"><?php echo $estado; ?></span></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
+        
+        <div class="mt-3">
+            <h4>Resumen:</h4>
+            <span class="badge bg-success me-2 fs-6">Presente: <?php echo $total_presente; ?></span>
+            <span class="badge bg-danger me-2 fs-6">Ausente: <?php echo $total_ausente; ?></span>
+            <span class="badge bg-warning text-dark me-2 fs-6">Tardanza: <?php echo $total_tardanza; ?></span>
+        </div>
     <?php endif; ?>
-
-    <div class="mt-4">
-        <a href="index.php?controller=Estudiante&action=panelCurso&id_curso=<?php echo $infoCurso['id_curso']; ?>" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-2"></i> Volver al Curso
-        </a>
-    </div>
+    
+    <?php include_once VIEW_PATH . 'layouts/boton_volver.php'; ?>
 </div>

@@ -99,5 +99,18 @@ class Matricula {
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row['total'];
     }
+
+    // --- NUEVA FUNCIÓN: El Admin elimina un curso específico de un alumno ---
+    public function eliminarCursoDeAlumno($id_estudiante, $id_curso) {
+        try {
+            $query = "DELETE FROM " . $this->table_name . " 
+                      WHERE id_estudiante = :id_estudiante AND id_curso = :id_curso";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':id_estudiante', $id_estudiante);
+            $stmt->bindParam(':id_curso', $id_curso);
+            return $stmt->execute();
+        } catch (PDOException $e) { return false; }
+    }
+
 }
 ?>

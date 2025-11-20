@@ -7,7 +7,7 @@
             <p class="mb-0 text-muted small"><i class="far fa-clock"></i> <?php echo htmlspecialchars($infoCurso['horario']); ?></p>
         </div>
         <a href="index.php?controller=Estudiante&action=index" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-2"></i> Volver al Inicio
+            <i class="fas fa-arrow-left me-2"></i> Volver
         </a>
     </div>
     <hr>

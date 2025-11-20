@@ -19,26 +19,40 @@ class EstudianteController {
 
     public function __construct() {
         if (session_status() == PHP_SESSION_NONE) { session_start(); }
-        if (!isset($_SESSION['id_usuario']) || $_SESSION['id_rol'] != 3) { header('Location: index.php'); exit(); }
-        $this->db = (new Database())->getConnection();
-        $this->usuario = new Usuario($this->db); $this->matricula = new Matricula($this->db); 
-        $this->asistencia = new Asistencia($this->db); $this->material = new Material($this->db);
-        $this->curso = new Curso($this->db); $this->tarea = new Tarea($this->db);
-        $this->entrega = new Entrega($this->db); $this->planEstudio = new PlanEstudio($this->db);
-        $this->prerequisito = new Prerequisito($this->db); $this->horarioHelper = new HorarioHelper();
-        $this->evaluacion = new Evaluacion($this->db); $this->nota = new Nota($this->db);
+        if (!isset($_SESSION['id_usuario']) || $_SESSION['id_rol'] != 3) {
+            header('Location: index.php?controller=Usuario&action=index');
+            exit();
+        }
+        $database = new Database();
+        $this->db = $database->getConnection();
+        $this->usuario = new Usuario($this->db);
+        $this->matricula = new Matricula($this->db); 
+        $this->asistencia = new Asistencia($this->db);
+        $this->material = new Material($this->db);
+        $this->curso = new Curso($this->db);
+        $this->tarea = new Tarea($this->db);
+        $this->entrega = new Entrega($this->db);
+        $this->planEstudio = new PlanEstudio($this->db);
+        $this->prerequisito = new Prerequisito($this->db);
+        $this->horarioHelper = new HorarioHelper();
+        $this->evaluacion = new Evaluacion($this->db);
+        $this->nota = new Nota($this->db);
     }
 
     public function index() {
         $id = $_SESSION['id_usuario'];
-        $cursosMatriculados = $this->matricula->getHorariosEstudiante($id);
+        
+        // Obtener cursos donde YA está inscrito para mostrarlos en el panel
+        $misCursos = $this->matricula->readCursosMatriculados($id);
         $listaTareasProximas = $this->tarea->readTareasProximasPorEstudiante($id);
+        
         require_once VIEW_PATH . 'layouts/header.php';
         require_once VIEW_PATH . 'estudiante/bienvenida_estudiante.php'; 
         require_once VIEW_PATH . 'layouts/footer.php';
     }
 
     public function panelCurso() {
+        if (!isset($_GET['id_curso'])) { header('Location: index.php?controller=Estudiante&action=index'); exit(); }
         $id_curso = $_GET['id_curso'];
         $infoCurso = $this->curso->readOne($id_curso);
         require_once VIEW_PATH . 'layouts/header.php';
@@ -93,36 +107,42 @@ class EstudianteController {
             if (move_uploaded_file($archivo['tmp_name'], ROOT_PATH . 'uploads/entregas/' . $nombre)) {
                 $this->entrega->id_tarea = $_POST['id_tarea'];
                 $this->entrega->id_estudiante = $_SESSION['id_usuario'];
-                $this->entrega->nombre_archivo = $archivo['name'];
+                $this->entrega->nombre_archivo = basename($archivo['name']);
                 $this->entrega->ruta_archivo = 'uploads/entregas/' . $nombre;
                 $this->entrega->crear();
-                $_SESSION['mensaje_tarea'] = ['tipo'=>'success', 'texto'=>'Tarea enviada.'];
+                $_SESSION['mensaje_tarea'] = ['tipo'=>'success', 'texto'=>'Tarea enviada correctamente.'];
             }
         }
         header('Location: index.php?controller=Estudiante&action=verTareas&id_curso=' . $_POST['id_curso']); exit();
     }
 
+    // --- MATRÍCULA (CON LÓGICA DE CANDADO Y LISTAS) ---
     public function verMatriculas() {
         $id_estudiante = $_SESSION['id_usuario'];
+        
+        // 1. Verificar si la matrícula está bloqueada por el Admin
+        $this->usuario->id_usuario = $id_estudiante;
+        $usuarioInfo = $this->usuario->readOne();
+        $matriculaBloqueada = $usuarioInfo['matricula_bloqueada'] ?? 0;
+
         $id_plan = $_SESSION['id_plan_estudio'] ?? 0;
+        $historialPromedios = $this->nota->getHistorialPromedios($id_estudiante);
         
         $infoPlan = null; 
         $cursosPorCiclo = []; 
         $reglasPrerequisitos = []; 
         $horariosActuales = []; 
-        $historialPromedios = [];
-        $misCursos = []; // Variable nueva para la lista de matriculados
+        $misCursos = []; // Cursos ya inscritos
 
-        $historialPromedios = $this->nota->getHistorialPromedios($id_estudiante);
-        
         if ($id_plan > 0) {
             $infoPlan = $this->planEstudio->readOne($id_plan);
+            // Cursos disponibles (que NO ha inscrito)
             $cursosPorCiclo = $this->matricula->readCursosDisponiblesPorPlan($id_plan, $id_estudiante);
+            // Cursos YA inscritos (para mostrarlos arriba)
+            $misCursos = $this->matricula->readCursosMatriculados($id_estudiante);
+            
             $reglasPrerequisitos = $this->prerequisito->readPrerequisitosPorPlan($id_plan);
             $horariosActuales = $this->matricula->getHorariosEstudiante($id_estudiante);
-            
-            // Cargar los cursos donde YA está matriculado
-            $misCursos = $this->matricula->readCursosMatriculados($id_estudiante);
         }
 
         require_once VIEW_PATH . 'layouts/header.php';
@@ -131,23 +151,32 @@ class EstudianteController {
     }
 
     public function matricularCurso() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_curso'])) {
-            $id_estudiante = $_SESSION['id_usuario'];
-            $id_curso = $_POST['id_curso'];
+        $id_estudiante = $_SESSION['id_usuario'];
+        
+        // 1. VALIDACIÓN DE SEGURIDAD (CANDADO)
+        $this->usuario->id_usuario = $id_estudiante;
+        $u = $this->usuario->readOne();
+        if ($u['matricula_bloqueada'] == 1) {
+            $_SESSION['mensaje'] = ['tipo' => 'danger', 'texto' => 'Tu matrícula ha sido cerrada por la administración.'];
+            header('Location: index.php?controller=Estudiante&action=verMatriculas');
+            exit();
+        }
 
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_curso'])) {
+            $id_curso = $_POST['id_curso'];
             $infoCurso = $this->curso->readOne($id_curso);
             $horarioNuevo = $infoCurso['horario'];
             $horariosActuales = $this->matricula->getHorariosEstudiante($id_estudiante);
             
             if ($this->horarioHelper->verificarConflictoConLista($horarioNuevo, $horariosActuales)) {
-                $_SESSION['mensaje'] = ['tipo' => 'danger', 'texto' => 'Error: Cruce de horario detectado.'];
+                $_SESSION['mensaje'] = ['tipo' => 'danger', 'texto' => 'No se puede matricular: Cruce de horario.'];
             } else {
                 $this->matricula->id_estudiante = $id_estudiante;
                 $this->matricula->id_curso = $id_curso;
                 if ($this->matricula->matricular()) {
-                    $_SESSION['mensaje'] = ['tipo' => 'success', 'texto' => 'Matrícula exitosa.'];
+                    $_SESSION['mensaje'] = ['tipo' => 'success', 'texto' => '¡Matrícula exitosa!'];
                 } else {
-                    $_SESSION['mensaje'] = ['tipo' => 'danger', 'texto' => 'Error al matricular.'];
+                    $_SESSION['mensaje'] = ['tipo' => 'danger', 'texto' => 'Error al procesar la matrícula.'];
                 }
             }
         }

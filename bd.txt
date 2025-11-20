@@ -266,3 +266,4 @@ INSERT INTO `cursos_plan` (`id_plan_estudio`, `id_curso`, `ciclo`) VALUES
 (2, 14, 5),
 (2, 15, 5),
 (2, 16, 5);
+ALTER TABLE usuarios ADD COLUMN matricula_bloqueada TINYINT(1) DEFAULT 0;

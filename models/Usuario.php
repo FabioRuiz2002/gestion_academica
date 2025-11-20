@@ -218,5 +218,24 @@ class Usuario {
             return $row['total'];
         } catch (PDOException $e) { return 0; }
     }
+
+    // --- NUEVAS FUNCIONES PARA EL CANDADO DE MATRÍCULA ---
+    
+    public function getEstadoMatricula($id) {
+        $query = "SELECT matricula_bloqueada FROM " . $this->table_name . " WHERE id_usuario = :id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $id);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row['matricula_bloqueada'] ?? 0;
+    }
+
+    public function toggleBloqueoMatricula($id, $estado) {
+        $query = "UPDATE " . $this->table_name . " SET matricula_bloqueada = :estado WHERE id_usuario = :id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':estado', $estado);
+        $stmt->bindParam(':id', $id);
+        return $stmt->execute();
+    }
 }
 ?>

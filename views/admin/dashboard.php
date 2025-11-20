@@ -58,7 +58,7 @@
                     <p class="card-text">Matriculados</p>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a href="#" class="text-white text-decoration-none">Ver Reportes</a>
+                    <a href="index.php?controller=Admin&action=verReportes" class="text-white text-decoration-none stretched-link">Ver Reportes</a>
                 </div>
             </div>
         </div>

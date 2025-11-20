@@ -1,121 +1,14 @@
-<?php 
-/* Archivo: views/admin/gestionar_matricula_alumno.php */ 
-$estadoCandado = $infoEstudiante['matricula_bloqueada'] ?? 0;
-?>
+<?php /* Archivo: views/admin/gestionar_matricula_alumno.php */ $estadoCandado = $infoEstudiante['matricula_bloqueada'] ?? 0; ?>
 <div class="container mt-4">
-    
     <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded shadow-sm">
-        <div>
-            <h5 class="text-muted mb-0">Gestionando a:</h5>
-            <h2 class="text-primary fw-bold"><?php echo htmlspecialchars($infoEstudiante['nombre'] . ' ' . $infoEstudiante['apellido']); ?></h2>
-            <span class="badge bg-secondary"><?php echo htmlspecialchars($infoEstudiante['codigo_estudiante']); ?></span>
-        </div>
-        
-        <div class="text-end">
-            <form action="index.php?controller=Admin&action=toggleCandado" method="POST">
-                <input type="hidden" name="id_estudiante" value="<?php echo $infoEstudiante['id_usuario']; ?>">
-                <?php if ($estadoCandado == 1): ?>
-                    <input type="hidden" name="nuevo_estado" value="0">
-                    <button type="submit" class="btn btn-danger btn-lg" title="Click para DESBLOQUEAR">
-                        <i class="fas fa-lock"></i> BLOQUEADO
-                    </button>
-                    <div class="small text-danger mt-1">El alumno no puede editar.</div>
-                <?php else: ?>
-                    <input type="hidden" name="nuevo_estado" value="1">
-                    <button type="submit" class="btn btn-success btn-lg" title="Click para BLOQUEAR">
-                        <i class="fas fa-lock-open"></i> DESBLOQUEADO
-                    </button>
-                    <div class="small text-success mt-1">El alumno puede agregar cursos.</div>
-                <?php endif; ?>
-            </form>
-            <a href="index.php?controller=Admin&action=gestionarUsuarios" class="btn btn-link text-muted mt-2">Volver a lista</a>
-        </div>
+        <div><h5 class="text-muted mb-0">Gestionando a:</h5><h2 class="text-primary fw-bold"><?php echo htmlspecialchars($infoEstudiante['nombre'] . ' ' . $infoEstudiante['apellido']); ?></h2><span class="badge bg-secondary"><?php echo htmlspecialchars($infoEstudiante['codigo_estudiante']); ?></span></div>
+        <div class="text-end"><form action="index.php?controller=Admin&action=toggleCandado" method="POST"><input type="hidden" name="id_estudiante" value="<?php echo $infoEstudiante['id_usuario']; ?>"><?php if ($estadoCandado == 1): ?><input type="hidden" name="nuevo_estado" value="0"><button type="submit" class="btn btn-danger btn-lg" title="Click para DESBLOQUEAR"><i class="fas fa-lock"></i> BLOQUEADO</button><div class="small text-danger mt-1">El alumno no puede editar.</div><?php else: ?><input type="hidden" name="nuevo_estado" value="1"><button type="submit" class="btn btn-success btn-lg" title="Click para BLOQUEAR"><i class="fas fa-lock-open"></i> DESBLOQUEADO</button><div class="small text-success mt-1">El alumno puede agregar cursos.</div><?php endif; ?></form></div>
     </div>
-
-    <?php if (isset($_SESSION['error_matricula'])): ?>
-        <div class="alert alert-danger alert-dismissible fade show"><?php echo $_SESSION['error_matricula']; unset($_SESSION['error_matricula']); ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-    <?php endif; ?>
-    <?php if (isset($_SESSION['success_matricula'])): ?>
-        <div class="alert alert-success alert-dismissible fade show"><?php echo $_SESSION['success_matricula']; unset($_SESSION['success_matricula']); ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-    <?php endif; ?>
-
+    <?php if (isset($_SESSION['error_matricula'])): ?><div class="alert alert-danger alert-dismissible fade show"><?php echo $_SESSION['error_matricula']; unset($_SESSION['error_matricula']); ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div><?php endif; ?>
+    <?php if (isset($_SESSION['success_matricula'])): ?><div class="alert alert-success alert-dismissible fade show"><?php echo $_SESSION['success_matricula']; unset($_SESSION['success_matricula']); ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div><?php endif; ?>
     <div class="row">
-        <div class="col-md-12 mb-5">
-            <div class="card border-primary">
-                <div class="card-header bg-primary text-white d-flex justify-content-between">
-                    <span>Cursos Matriculados</span>
-                    <span class="badge bg-light text-dark"><?php echo count($cursosMatriculados); ?> Cursos</span>
-                </div>
-                <div class="card-body p-0">
-                    <?php if (empty($cursosMatriculados)): ?>
-                        <div class="p-4 text-muted text-center">El alumno no tiene cursos matriculados.</div>
-                    <?php else: ?>
-                        <table class="table table-striped mb-0 align-middle">
-                            <thead><tr><th>Curso</th><th>Horario</th><th>Profesor</th><th>Ciclo</th><th class="text-end">Acción</th></tr></thead>
-                            <tbody>
-                                <?php foreach ($cursosMatriculados as $cm): ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($cm['nombre_curso']); ?></td>
-                                        <td><?php echo htmlspecialchars($cm['horario']); ?></td>
-                                        <td><?php echo htmlspecialchars($cm['nombre_profesor'].' '.$cm['apellido_profesor']); ?></td>
-                                        <td><?php echo htmlspecialchars($cm['ciclo']); ?></td>
-                                        <td class="text-end">
-                                            <a href="index.php?controller=Admin&action=eliminarCursoAlumno&id_estudiante=<?php echo $infoEstudiante['id_usuario']; ?>&id_curso=<?php echo $cm['id_curso']; ?>" 
-                                               class="btn btn-outline-danger btn-sm" 
-                                               onclick="return confirm('¿Seguro que deseas quitar este curso al alumno?');">
-                                                <i class="fas fa-trash-alt"></i> Quitar
-                                            </a>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-12">
-            <h4 class="text-secondary">Agregar Cursos Manualmente</h4>
-            <hr>
-            <?php if (empty($cursosPorCiclo)): ?>
-                <div class="alert alert-warning">No hay más cursos disponibles en la malla.</div>
-            <?php else: ?>
-                <div class="accordion" id="accMallaAdmin">
-                    <?php foreach ($cursosPorCiclo as $ciclo => $cursos): ?>
-                        <div class="accordion-item">
-                            <h2 class="accordion-header" id="ha-<?php echo $ciclo; ?>">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ca-<?php echo $ciclo; ?>">
-                                    Ciclo <?php echo $ciclo; ?>
-                                </button>
-                            </h2>
-                            <div id="ca-<?php echo $ciclo; ?>" class="accordion-collapse collapse" data-bs-parent="#accMallaAdmin">
-                                <div class="accordion-body p-0">
-                                    <table class="table table-hover mb-0 align-middle">
-                                        <thead><tr><th>Curso</th><th>Horario</th><th>Profesor</th><th class="text-end">Acción</th></tr></thead>
-                                        <tbody>
-                                            <?php foreach ($cursos as $curso): ?>
-                                                <tr>
-                                                    <td><?php echo htmlspecialchars($curso['nombre_curso']); ?></td>
-                                                    <td><?php echo htmlspecialchars($curso['horario']); ?></td>
-                                                    <td><?php echo htmlspecialchars($curso['nombre_profesor'].' '.$curso['apellido_profesor']); ?></td>
-                                                    <td class="text-end">
-                                                        <form action="index.php?controller=Admin&action=matricularAlumnoComoAdmin" method="POST">
-                                                            <input type="hidden" name="id_estudiante" value="<?php echo $infoEstudiante['id_usuario']; ?>">
-                                                            <input type="hidden" name="id_curso" value="<?php echo $curso['id_curso']; ?>">
-                                                            <button type="submit" class="btn btn-primary btn-sm">Inscribir</button>
-                                                        </form>
-                                                    </td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </div>
+        <div class="col-md-12 mb-5"><div class="card border-primary"><div class="card-header bg-primary text-white d-flex justify-content-between"><span>Cursos Matriculados</span><span class="badge bg-light text-dark"><?php echo count($cursosMatriculados); ?> Cursos</span></div><div class="card-body p-0"><?php if (empty($cursosMatriculados)): ?><div class="p-4 text-muted text-center">El alumno no tiene cursos matriculados.</div><?php else: ?><table class="table table-striped mb-0 align-middle"><thead><tr><th>Curso</th><th>Horario</th><th>Profesor</th><th>Ciclo</th><th class="text-end">Acción</th></tr></thead><tbody><?php foreach ($cursosMatriculados as $cm): ?><tr><td><?php echo htmlspecialchars($cm['nombre_curso']); ?></td><td><?php echo htmlspecialchars($cm['horario']); ?></td><td><?php echo htmlspecialchars($cm['nombre_profesor'].' '.$cm['apellido_profesor']); ?></td><td><?php echo htmlspecialchars($cm['ciclo']); ?></td><td class="text-end"><a href="index.php?controller=Admin&action=eliminarCursoAlumno&id_estudiante=<?php echo $infoEstudiante['id_usuario']; ?>&id_curso=<?php echo $cm['id_curso']; ?>" class="btn btn-outline-danger btn-sm" onclick="return confirm('¿Quitar curso?');"><i class="fas fa-trash-alt"></i> Quitar</a></td></tr><?php endforeach; ?></tbody></table><?php endif; ?></div></div></div>
+        <div class="col-md-12"><h4 class="text-secondary">Agregar Cursos Manualmente</h4><hr><?php if (empty($cursosPorCiclo)): ?><div class="alert alert-warning">No hay más cursos disponibles en la malla.</div><?php else: ?><div class="accordion" id="accMallaAdmin"><?php foreach ($cursosPorCiclo as $ciclo => $cursos): ?><div class="accordion-item"><h2 class="accordion-header" id="ha-<?php echo $ciclo; ?>"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ca-<?php echo $ciclo; ?>">Ciclo <?php echo $ciclo; ?></button></h2><div id="ca-<?php echo $ciclo; ?>" class="accordion-collapse collapse" data-bs-parent="#accMallaAdmin"><div class="accordion-body p-0"><table class="table table-hover mb-0 align-middle"><thead><tr><th>Curso</th><th>Horario</th><th>Profesor</th><th class="text-end">Acción</th></tr></thead><tbody><?php foreach ($cursos as $curso): ?><tr><td><?php echo htmlspecialchars($curso['nombre_curso']); ?></td><td><?php echo htmlspecialchars($curso['horario']); ?></td><td><?php echo htmlspecialchars($curso['nombre_profesor'].' '.$curso['apellido_profesor']); ?></td><td class="text-end"><form action="index.php?controller=Admin&action=matricularAlumnoComoAdmin" method="POST"><input type="hidden" name="id_estudiante" value="<?php echo $infoEstudiante['id_usuario']; ?>"><input type="hidden" name="id_curso" value="<?php echo $curso['id_curso']; ?>"><button type="submit" class="btn btn-primary btn-sm">Inscribir</button></form></td></tr><?php endforeach; ?></tbody></table></div></div></div><?php endforeach; ?></div><?php endif; ?></div>
     </div>
+    <?php include_once VIEW_PATH . 'layouts/boton_volver.php'; ?>
 </div>

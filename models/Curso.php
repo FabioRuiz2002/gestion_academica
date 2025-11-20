@@ -1,9 +1,4 @@
 <?php
-/*
- * Archivo: models/Curso.php
- * (AÑADIDA: 'getHorariosPorProfesor' y 'updateProfesor')
- * (CORREGIDOS: todos los errores 'this.')
- */
 class Curso {
     
     private $conn;
@@ -30,10 +25,6 @@ class Curso {
         } catch (PDOException $e) { return false; }
     }
 
-    /**
-     * NUEVA FUNCIÓN
-     * Obtiene todos los horarios de un profesor, EXCLUYENDO un curso (para editar)
-     */
     public function getHorariosPorProfesor($id_profesor, $excluir_id_curso = 0) {
         try {
             $query = "SELECT horario FROM " . $this->table_name . "

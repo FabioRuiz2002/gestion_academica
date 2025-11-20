@@ -1,150 +1,59 @@
 <?php
-/*
- * Archivo: models/Entrega.php
- * (CORREGIDO error 'this-')
- */
 class Entrega {
-    
     private $conn;
     private $table_name = "entregas";
+    public $id_entrega; public $id_tarea; public $id_estudiante; public $archivo; public $calificacion; public $comentario; public $nombre_archivo; public $ruta_archivo; public $comentario_profesor;
 
-    public $id_entrega;
-    public $id_tarea;
-    public $id_estudiante;
-    public $nombre_archivo;
-    public $ruta_archivo;
-    public $calificacion;
-    public $comentario_profesor;
+    public function __construct($db) { $this->conn = $db; }
 
-    public function __construct($db) {
-        $this->conn = $db;
+    public function crear() {
+        $query = "INSERT INTO " . $this->table_name . " (id_tarea, id_estudiante, nombre_archivo, ruta_archivo) VALUES (:t, :e, :n, :r)";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':t', $this->id_tarea);
+        $stmt->bindParam(':e', $this->id_estudiante);
+        $stmt->bindParam(':n', $this->nombre_archivo);
+        $stmt->bindParam(':r', $this->ruta_archivo);
+        return $stmt->execute();
     }
 
     public function readPorTarea($id_tarea) {
-        try {
-            $query = "SELECT 
-                        e.*, 
-                        u.nombre, 
-                        u.apellido
-                      FROM 
-                        " . $this->table_name . " e
-                      JOIN 
-                        usuarios u ON e.id_estudiante = u.id_usuario
-                      WHERE 
-                        e.id_tarea = :id_tarea
-                      ORDER BY 
-                        u.apellido ASC";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':id_tarea', $id_tarea);
-            $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) { return []; }
+        $query = "SELECT e.*, u.nombre, u.apellido FROM " . $this->table_name . " e JOIN usuarios u ON e.id_estudiante = u.id_usuario WHERE e.id_tarea = :id ORDER BY u.apellido";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $id_tarea);
+        $stmt->execute();
+        return $stmt;
     }
 
     public function readPorEstudianteYCurso($id_estudiante, $id_curso) {
-        try {
-            $query = "SELECT e.*, t.titulo
-                      FROM " . $this->table_name . " e
-                      JOIN tareas t ON e.id_tarea = t.id_tarea
-                      WHERE e.id_estudiante = :id_estudiante AND t.id_curso = :id_curso";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':id_estudiante', $id_estudiante);
-            $stmt->bindParam(':id_curso', $id_curso);
-            $stmt->execute();
-            $entregas = [];
-            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                $entregas[$row['id_tarea']] = $row;
-            }
-            return $entregas;
-        } catch (PDOException $e) { return []; }
+        $query = "SELECT e.*, t.titulo FROM " . $this->table_name . " e JOIN tareas t ON e.id_tarea = t.id_tarea WHERE e.id_estudiante = :e AND t.id_curso = :c";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':e', $id_estudiante);
+        $stmt->bindParam(':c', $id_curso);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function crear() {
-        try {
-            $checkQuery = "SELECT id_entrega FROM " . $this->table_name . " WHERE id_tarea = :id_tarea AND id_estudiante = :id_estudiante";
-            $checkStmt = $this->conn->prepare($checkQuery);
-            $checkStmt->bindParam(':id_tarea', $this->id_tarea);
-            $checkStmt->bindParam(':id_estudiante', $this->id_estudiante);
-            $checkStmt->execute();
-            if ($checkStmt->rowCount() > 0) { return false; }
-            $query = "INSERT INTO " . $this->table_name . "
-                      (id_tarea, id_estudiante, nombre_archivo, ruta_archivo)
-                      VALUES
-                      (:id_tarea, :id_estudiante, :nombre_archivo, :ruta_archivo)";
-            $stmt = $this->conn->prepare($query);
-            $this->id_tarea = htmlspecialchars(strip_tags($this->id_tarea));
-            $this->id_estudiante = htmlspecialchars(strip_tags($this->id_estudiante));
-            $this->nombre_archivo = htmlspecialchars(strip_tags($this->nombre_archivo));
-            $this->ruta_archivo = htmlspecialchars(strip_tags($this->ruta_archivo));
-            $stmt->bindParam(':id_tarea', $this->id_tarea);
-            $stmt->bindParam(':id_estudiante', $this->id_estudiante);
-            $stmt->bindParam(':nombre_archivo', $this->nombre_archivo);
-            $stmt->bindParam(':ruta_archivo', $this->ruta_archivo);
-            return $stmt->execute();
-        } catch (PDOException $e) { return false; }
-    }
-    
     public function calificar() {
-        try {
-            $query = "UPDATE " . $this->table_name . " SET
-                        calificacion = :calificacion,
-                        comentario_profesor = :comentario
-                      WHERE 
-                        id_entrega = :id_entrega";
-            $stmt = $this->conn->prepare($query);
-            $this->id_entrega = htmlspecialchars(strip_tags($this->id_entrega));
-            $this->calificacion = htmlspecialchars(strip_tags($this->calificacion));
-            $this->comentario_profesor = htmlspecialchars(strip_tags($this->comentario_profesor));
-            $stmt->bindParam(':calificacion', $this->calificacion);
-            $stmt->bindParam(':comentario', $this->comentario_profesor);
-            $stmt->bindParam(':id_entrega', $this->id_entrega);
-            return $stmt->execute();
-        } catch (PDOException $e) { return false; }
-    }
-
-    public function getPromedioDeTareas($id_estudiante, $id_curso) {
-        try {
-            $query = "SELECT AVG(e.calificacion) as promedio
-                      FROM " . $this->table_name . " e
-                      JOIN tareas t ON e.id_tarea = t.id_tarea
-                      WHERE e.id_estudiante = :id_estudiante 
-                        AND t.id_curso = :id_curso 
-                        AND e.calificacion IS NOT NULL";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':id_estudiante', $id_estudiante);
-            $stmt->bindParam(':id_curso', $id_curso);
-            $stmt->execute();
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            return $row['promedio'] ?? 0; 
-        } catch (PDOException $e) { return 0; }
+        $query = "UPDATE " . $this->table_name . " SET calificacion = :c, comentario_profesor = :cp WHERE id_entrega = :id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':c', $this->calificacion);
+        $stmt->bindParam(':cp', $this->comentario_profesor);
+        $stmt->bindParam(':id', $this->id_entrega);
+        return $stmt->execute();
     }
     
     public function readEntregasRecientesPorProfesor($id_profesor) {
-        try {
-            $query = "SELECT 
-                        e.id_entrega, e.fecha_entrega,
-                        t.id_tarea, t.titulo AS nombre_tarea,
-                        c.nombre_curso,
-                        u.nombre, u.apellido
-                      FROM 
-                        entregas e
-                      JOIN 
-                        tareas t ON e.id_tarea = t.id_tarea
-                      JOIN 
-                        cursos c ON t.id_curso = c.id_curso
-                      JOIN 
-                        usuarios u ON e.id_estudiante = u.id_usuario
-                      WHERE 
-                        c.id_profesor = :id_profesor
-                        AND e.calificacion IS NULL
-                      ORDER BY 
-                        e.fecha_entrega DESC
-                      LIMIT 5";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':id_profesor', $id_profesor);
-            $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) { return []; }
+        $query = "SELECT e.fecha_entrega, t.titulo as nombre_tarea, c.nombre_curso, u.nombre, u.apellido
+                  FROM " . $this->table_name . " e
+                  JOIN tareas t ON e.id_tarea = t.id_tarea
+                  JOIN cursos c ON t.id_curso = c.id_curso
+                  JOIN usuarios u ON e.id_estudiante = u.id_usuario
+                  WHERE c.id_profesor = :id AND e.calificacion IS NULL
+                  ORDER BY e.fecha_entrega DESC LIMIT 5";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $id_profesor);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 ?>

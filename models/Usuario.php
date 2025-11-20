@@ -1,10 +1,5 @@
 <?php
-/*
- * Archivo: models/Usuario.php
- * (ACTUALIZADO: Añadido DNI, Código Estudiante y readByRol)
- */
 class Usuario {
-    
     private $conn;
     private $table_name = "usuarios";
 
@@ -34,21 +29,11 @@ class Usuario {
         } catch (PDOException $e) { return false; }
     }
     
-    /**
-     * FUNCIÓN REESCRITA
-     * Lee todos los usuarios según su ROL.
-     * Si el rol es 3 (Estudiante), los agrupa por Facultad/Escuela.
-     */
     public function readByRol($id_rol) {
         try {
             $query = "";
             if ($id_rol == 3) {
-                // Consulta compleja para estudiantes
-                $query = "SELECT 
-                            u.*, r.nombre_rol, 
-                            p.nombre_plan, 
-                            e.nombre_escuela, 
-                            f.nombre_facultad
+                $query = "SELECT u.*, r.nombre_rol, p.nombre_plan, e.nombre_escuela, f.nombre_facultad
                           FROM " . $this->table_name . " u
                           JOIN roles r ON u.id_rol = r.id_rol
                           LEFT JOIN planes_estudio p ON u.id_plan_estudio = p.id_plan_estudio
@@ -57,20 +42,16 @@ class Usuario {
                           WHERE u.id_rol = 3
                           ORDER BY f.nombre_facultad, e.nombre_escuela, u.apellido, u.nombre";
             } else {
-                // Consulta simple para Admins y Profesores
                 $query = "SELECT u.*, r.nombre_rol
                           FROM " . $this->table_name . " u
                           JOIN roles r ON u.id_rol = r.id_rol
                           WHERE u.id_rol = :id_rol
                           ORDER BY u.apellido, u.nombre";
             }
-            
             $stmt = $this->conn->prepare($query);
-            
             if ($id_rol != 3) {
                 $stmt->bindParam(':id_rol', $id_rol);
             }
-            
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -107,13 +88,8 @@ class Usuario {
         } catch (PDOException $e) { return []; }
     }
 
-    /**
-     * FUNCIÓN MODIFICADA
-     * Ahora incluye DNI y genera Código de Estudiante
-     */
     public function crear() {
         try {
-            // 1. Verificar si el DNI o Email ya existen
             $checkQuery = "SELECT id_usuario FROM " . $this->table_name . " WHERE email = :email OR dni = :dni";
             $checkStmt = $this->conn->prepare($checkQuery);
             $this->email = htmlspecialchars(strip_tags($this->email));
@@ -121,11 +97,8 @@ class Usuario {
             $checkStmt->bindParam(':email', $this->email);
             $checkStmt->bindParam(':dni', $this->dni);
             $checkStmt->execute();
-            if ($checkStmt->rowCount() > 0) {
-                return false; // DNI o Email duplicado
-            }
+            if ($checkStmt->rowCount() > 0) { return false; }
 
-            // 2. Insertar el usuario
             $query = "INSERT INTO " . $this->table_name . "
                       (id_rol, id_plan_estudio, nombre, apellido, dni, email, password)
                       VALUES
@@ -144,16 +117,11 @@ class Usuario {
             $stmt->bindParam(':email', $this->email);
             $stmt->bindParam(':password', $this->password);
             
-            if (!$stmt->execute()) {
-                return false;
-            }
+            if (!$stmt->execute()) { return false; }
 
-            // 3. Si es Estudiante, generar y guardar su código
             if ($this->id_rol == 3) {
                 $nuevoId = $this->conn->lastInsertId();
-                // Generar código: Ej: E2025-0001 (E + Año + ID de 4 dígitos)
                 $codigo = "E" . date('Y') . "-" . str_pad($nuevoId, 4, '0', STR_PAD_LEFT);
-                
                 $updateQuery = "UPDATE " . $this->table_name . " SET codigo_estudiante = :codigo WHERE id_usuario = :id";
                 $updateStmt = $this->conn->prepare($updateQuery);
                 $updateStmt->bindParam(':codigo', $codigo);
@@ -161,28 +129,18 @@ class Usuario {
                 $updateStmt->execute();
             }
             return true;
-
-        } catch (PDOException $e) {
-            return false; 
-        }
+        } catch (PDOException $e) { return false; }
     }
 
-    /**
-     * FUNCIÓN MODIFICADA
-     * Ahora incluye DNI
-     */
     public function update() {
         try {
-            // Verificar DNI duplicado (excluyendo al propio usuario)
             $checkQuery = "SELECT id_usuario FROM " . $this->table_name . " WHERE dni = :dni AND id_usuario != :id_usuario";
             $checkStmt = $this->conn->prepare($checkQuery);
             $this->dni = htmlspecialchars(strip_tags($this->dni));
             $checkStmt->bindParam(':dni', $this->dni);
             $checkStmt->bindParam(':id_usuario', $this->id_usuario);
             $checkStmt->execute();
-            if ($checkStmt->rowCount() > 0) {
-                return false; // DNI duplicado
-            }
+            if ($checkStmt->rowCount() > 0) { return false; }
 
             $password_set = !empty($this->password) ? "password = :password," : "";
             $query = "UPDATE " . $this->table_name . " SET
@@ -220,6 +178,17 @@ class Usuario {
         } catch (PDOException $e) { return false; }
     }
     
+    public function cambiarPassword($id_usuario, $nuevo_password) {
+        try {
+            $query = "UPDATE " . $this->table_name . " SET password = :password WHERE id_usuario = :id_usuario";
+            $stmt = $this->conn->prepare($query);
+            $password_hash = password_hash($nuevo_password, PASSWORD_DEFAULT);
+            $stmt->bindParam(':password', $password_hash);
+            $stmt->bindParam(':id_usuario', $id_usuario);
+            return $stmt->execute();
+        } catch (PDOException $e) { return false; }
+    }
+
     public function delete() {
         try {
             $query = "DELETE FROM " . $this->table_name . " WHERE id_usuario = ?";
